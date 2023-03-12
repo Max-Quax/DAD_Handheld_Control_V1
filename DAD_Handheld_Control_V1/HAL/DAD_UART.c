@@ -124,6 +124,16 @@ size_t DAD_UART_NumCharsInBuffer(DAD_UART_Struct* UARTPtr){
     return modifiedRingBuf_getCount(&(UARTPtr->UART_Buffer));
 }
 
+// Disable Interrupts
+void DAD_UART_DisableInt(DAD_UART_Struct* UARTPtr){
+    MAP_UART_disableInterrupt(UARTPtr->moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
+}
+
+// Enable Interrupts
+void DAD_UART_EnableInt(DAD_UART_Struct* UARTPtr){
+    MAP_UART_enableInterrupt(UARTPtr->moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
+}
+
 // Returns the value for the second modulation register
     // Uses fractional part of division factor to look through table.
     // Return value just below fractional part

@@ -72,6 +72,12 @@ void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, unsigned char* msg);
 // At least 1 char is ready
 bool DAD_UART_HasChar(DAD_UART_Struct* UARTPtr);
 
+// Disable Interrupts
+void DAD_UART_DisableInt(DAD_UART_Struct* UARTPtr);
+
+// Enable Interrupts
+void DAD_UART_EnableInt(DAD_UART_Struct* UARTPtr);
+
 // Returns number of chars in buffer
 size_t DAD_UART_NumCharsInBuffer(DAD_UART_Struct* UARTPtr);
 
