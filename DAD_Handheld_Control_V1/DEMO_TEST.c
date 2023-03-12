@@ -29,6 +29,7 @@ int main(void)
     /* Halting WDT  */
     MAP_WDT_A_holdTimer();
 
+    // Application loop
     FSMstate state = STARTUP;
     while(true){
         DAD_FSM_control(&state);    // Handle everything
@@ -54,14 +55,6 @@ uint8_t bytes[4];
 typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
 typedef enum {TEMP, HUM, VIB, MIC, LOWBAT, ERR, STOP, START} packetType;
 
-// TODO test that it works
-// TODO integrate HAL
-    // TODO UART
-        // TODO integrate buffer
-        // TODO implement transmits
-    // TODO Timers
-    // TODO callback functinality?
-
 const eUSCI_UART_ConfigV1 uartConfig =
 {
         EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
@@ -84,7 +77,6 @@ char *intToString(int num) {
 
 void writeSensorData(int port, int data, packetType type)
 {
-    // TODO transmit using HAL
     MAP_UART_transmitData(EUSCI_A2_BASE, 'H');
     MAP_UART_transmitData(EUSCI_A2_BASE, 'O');
     MAP_UART_transmitData(EUSCI_A2_BASE, 'M');
@@ -125,7 +117,6 @@ void writeSensorData(int port, int data, packetType type)
 
 void sensorDisconnect(int port)
 {
-    // TODO transmit using HAL
     MAP_UART_transmitData(EUSCI_A2_BASE, 'H');
     MAP_UART_transmitData(EUSCI_A2_BASE, 'O');
     MAP_UART_transmitData(EUSCI_A2_BASE, 'M');
@@ -155,7 +146,6 @@ void sensorDisconnect(int port)
 
 void handlePacket()
 {
-    // TODO get packet from buffer
     packetStatus status = (packetStatus)((bytes[0] & 24) >> 3);
     packetType type = (packetType)(bytes[0] & 7);
     int port = (bytes[0] & 224) >> 5;
@@ -209,7 +199,6 @@ void packetIntake(uint8_t byte)
         bytes[1] = bytes[2];
         bytes[2] = bytes[3];
         bytes[3] = byte;
-        // TODO get packet, validate that it is a packet
     }
 
 }

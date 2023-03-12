@@ -14,8 +14,7 @@
 
 // HAL Includes
 #include "HAL/DAD_UART.h"
-// TODO add microSD interfaces
-
+#include "HAL/DAD_microSD.h"
 
 // Macros
 #define STATUS_MASK 24
@@ -35,7 +34,7 @@ void writeToHMI(uint8_t port, uint8_t data, packetType type, DAD_UART_Struct* UA
 // TODO write data to microSD
 
 // Handle an individual packet
-void handlePacket(DAD_UART_Struct* UARTptr);
+void handlePacket(DAD_UART_Struct* RSA_UARTptr, DAD_UART_Struct* HMI_UARTptr);
 
 // Build packet from data in UART buffer
 bool constructPacket(uint8_t* packet, DAD_UART_Struct* UARTptr);

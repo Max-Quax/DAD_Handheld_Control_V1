@@ -6,6 +6,7 @@
  */
 
 #include "DAD_Interface_Handler.h"
+#include <string.h>
 
 static void *intToString(int num) {
     char str[PACKET_SIZE];
@@ -13,11 +14,11 @@ static void *intToString(int num) {
     return str;
 }
 
-void handlePacket(DAD_UART_Struct* UARTptr)
+void handlePacket(DAD_UART_Struct* RSA_UARTptr, DAD_UART_Struct* HMI_UARTptr)
 {
     // Construct packet
     uint8_t packet[PACKET_SIZE];
-    constructPacket(packet, UARTptr);
+    constructPacket(packet, RSA_UARTptr);
 
     // Interpret packet
     packetStatus PKstatus = (packetStatus)((packet[0] & STATUS_MASK) >> 3);
@@ -29,18 +30,18 @@ void handlePacket(DAD_UART_Struct* UARTptr)
     switch(PKstatus)
     {
         case DISCON:
-            sensorDisconnectHMI(port, UARTptr);
+            sensorDisconnectHMI(port, HMI_UARTptr);
             break;
         case CON_D:
             switch(type)
             {
                 case TEMP:
                     data = (packet[1] << 8) + packet[2];
-                    writeToHMI(port, data%100, type, UARTptr);
+                    writeToHMI(port, data%100, type, HMI_UARTptr);
                     break;
                 case HUM:
                     data = (packet[1] << 8) + packet[2];
-                    writeToHMI(port, data%100, type, UARTptr);
+                    writeToHMI(port, data%100, type, HMI_UARTptr);
                     break;
                 case VIB:
                     break;

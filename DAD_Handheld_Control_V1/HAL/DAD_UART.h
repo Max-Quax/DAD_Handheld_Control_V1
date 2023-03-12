@@ -61,13 +61,13 @@ void DAD_UART_Stop(DAD_UART_Struct* UARTPtr);
 unsigned char DAD_UART_GetChar(DAD_UART_Struct* UARTPtr);
 
 // Write a single char to microSD
-void DAD_UART_Write_Char(DAD_UART_Struct* UARTPtr, char c);
+void DAD_UART_Write_Char(DAD_UART_Struct* UARTPtr, unsigned char c);
 
 // Peek char at front of buffer
-void DAD_UART_Peek(DAD_UART_Struct* UARTPtr, char* c);
+void DAD_UART_Peek(DAD_UART_Struct* UARTPtr, unsigned char* c);
 
 // Write a string to microSD
-void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, char* msg);
+void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, unsigned char* msg);
 
 // At least 1 char is ready
 bool DAD_UART_HasChar(DAD_UART_Struct* UARTPtr);

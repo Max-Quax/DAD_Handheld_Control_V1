@@ -11,6 +11,9 @@
 // Interface includes
 #include "HAL/DAD_UART.h"
 
+#define FSM_TIMER_HANDLE TIMER_A0_BASE
+#define FSM_TIMER_PERIOD 500            // Period in ms
+
 typedef enum {STARTUP, RSA_READ, PROCESS_DATA, WRITE_TO_PERIPH} FSMstate;   // TODO add states as necessary
 
 // Initializes interfaces, timers necessary for FSM use

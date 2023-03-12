@@ -86,12 +86,12 @@ void DAD_UART_Init(DAD_UART_Struct* UARTPtr, size_t bufferSize){
 }
 
 // Write single char
-void DAD_UART_Write_Char(DAD_UART_Struct* UARTPtr, char c){
+void DAD_UART_Write_Char(DAD_UART_Struct* UARTPtr, unsigned char c){
     MAP_UART_transmitData(UARTPtr->moduleInst, c);
 }
 
 // Write full message
-void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, char* msg){
+void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, unsigned char* msg){
     uint16_t msgLength = strlen(msg);
     uint16_t i;
     for(i = 0; i < msgLength; i++){
@@ -116,8 +116,8 @@ unsigned char DAD_UART_GetChar(DAD_UART_Struct* UARTPtr){
     return c;
 }
 
-void DAD_UART_Peek(DAD_UART_Struct* UARTPtr, char* c){
-    return modifiedRingBuf_peek(UARTPtr->moduleInst, c);
+void DAD_UART_Peek(DAD_UART_Struct* UARTPtr, unsigned char* c){
+    modifiedRingBuf_peek(&(UARTPtr->UART_Buffer), c);
 }
 
 size_t DAD_UART_NumCharsInBuffer(DAD_UART_Struct* UARTPtr){
@@ -155,7 +155,7 @@ void EUSCIA0_IRQHandler(void){
         modifiedRingBuf_put(UART0_BuffPtr, UART_receiveData(EUSCI_A0_BASE)); // Put received data at end of buffer
     }
 
-    //Clear all interrupts
+    //Clear all interrupts lol
     UART_clearInterruptFlag(EUSCI_A0_BASE, 0xFF);
 }
 
@@ -166,7 +166,7 @@ void EUSCIA1_IRQHandler(void){
         modifiedRingBuf_put(UART1_BuffPtr, UART_receiveData(EUSCI_A1_BASE)); // Put received data at end of buffer
     }
 
-    //Clear all interrupts
+    //Clear all interrupts lol
     UART_clearInterruptFlag(EUSCI_A1_BASE, 0xFF);
 }
 
@@ -177,7 +177,7 @@ void EUSCIA2_IRQHandler(void){
         modifiedRingBuf_put(UART2_BuffPtr, UART_receiveData(EUSCI_A2_BASE)); // Put received data at end of buffer
     }
 
-    //Clear all interrupts
+    //Clear all interrupts lol
     UART_clearInterruptFlag(EUSCI_A2_BASE, 0xFF);
 }
 
@@ -188,6 +188,6 @@ void EUSCIA3_IRQHandler(void){
         modifiedRingBuf_put(UART3_BuffPtr, UART_receiveData(EUSCI_A3_BASE)); // Put received data at end of buffer
     }
 
-    //Clear all interrupts
+    //Clear all interrupts lol
     UART_clearInterruptFlag(EUSCI_A3_BASE, 0xFF);
 }
