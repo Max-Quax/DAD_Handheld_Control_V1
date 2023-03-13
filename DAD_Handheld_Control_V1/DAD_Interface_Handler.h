@@ -65,7 +65,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct);
 static void writeToHMI(uint8_t port, uint8_t data, packetType type, DAD_UART_Struct* UARTptr);
 
 // Writes single packet of data to microSD
-static void writeToMicroSD(uint8_t port, uint8_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+static void writeToMicroSD(uint8_t port, uint8_t data, packetType type, packetStatus status, DAD_Interface_Struct* interfaceStruct);
 
 // Report to HMI that sensor has been disconnected
 static void sensorDisconnectHMI(int port, DAD_UART_Struct* UARTptr);

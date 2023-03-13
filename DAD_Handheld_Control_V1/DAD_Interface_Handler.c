@@ -77,12 +77,12 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
                 case TEMP:
                     data = (packet[1] << 8) + packet[2];
                     writeToHMI(port, data, type, &interfaceStruct->HMI_UART_struct);
-                    writeToMicroSD(port, data, type, interfaceStruct);
+                    writeToMicroSD(port, data, type, PKstatus, interfaceStruct);
                     break;
                 case HUM:
                     data = (packet[1] << 8) + packet[2];
                     writeToHMI(port, data%100, type, &interfaceStruct->HMI_UART_struct);
-                    writeToMicroSD(port, data%100, type, interfaceStruct);
+                    writeToMicroSD(port, data%100, type, PKstatus, interfaceStruct);
                     break;
                 case VIB:
                     break;
@@ -91,10 +91,10 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
             }
             break;
         case CON_ND:
-            DAD_microSD_Write("connected a sensor\n", &interfaceStruct->microSD_UART);  // TODO
+            //DAD_microSD_Write("CON_ND\n", &interfaceStruct->microSD_UART);  // TODO
             break;
         case MSG:
-            DAD_microSD_Write("message\n", &interfaceStruct->microSD_UART);             // TODO
+            //DAD_microSD_Write("MSG\n", &interfaceStruct->microSD_UART);             // TODO
             break;
         default:
             DAD_microSD_Write("bad packet\n", &interfaceStruct->microSD_UART);
@@ -149,16 +149,26 @@ static void writeToHMI(uint8_t port, uint8_t data, packetType type, DAD_UART_Str
     return;
 }
 
-static void writeToMicroSD(uint8_t port, uint8_t data, packetType type, DAD_Interface_Struct* interfaceStruct){
-    // Check that we are writing to the right file
-    if(interfaceStruct->currentPort != port){           // Compare data type to the file that is currently being written to
-        // TODO open the correct file
-        // sprintf(fileName, "%d.txt", port);
-        //switch(*currentPort){
-            //
-        //}
+static void writeToMicroSD(uint8_t port, uint8_t data, packetType type, packetStatus status, DAD_Interface_Struct* interfaceStruct){
+    if(status == CON_D){
+        // Check that we are writing to the right file
+        if(interfaceStruct->currentPort != port ){           // Compare data type to the file that is currently being written to
 
-        interfaceStruct->currentPort = port;
+            // Set port
+            sprintf(interfaceStruct->fileName, "port%d.csv", port+1);
+            interfaceStruct->currentPort = port;
+
+            // Open the correct file
+            DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
+        }
+    }
+    else if(strcmp(interfaceStruct->fileName, "log.txt") != 0){
+        // Open the correct file
+        sprintf(interfaceStruct->fileName, "log.txt");
+        DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
+
+        // Set port
+        interfaceStruct->currentPort = 255;
     }
 
     // Construct message
