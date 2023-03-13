@@ -55,6 +55,8 @@ double DAD_Timer_Stop(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig);
     // Returns time (in us or ms depending on how timer was initialized)
 double DAD_Timer_Get_Time(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig);
 
+void DAD_Timer_Restart(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig);
+
 static void DAD_Timer_Set_Interrupt(uint32_t timerBase);
 
 #endif /* DAD_TIMER_H_ */

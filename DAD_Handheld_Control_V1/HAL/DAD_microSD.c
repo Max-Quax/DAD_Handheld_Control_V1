@@ -16,9 +16,9 @@ static void DAD_microSD_enterCMD(DAD_UART_Struct* uartStruct){
     // blocks until cmd mode was entered
     //while(DAD_UART_GetChar(uartStruct) != '>');
     Timer_A_UpModeConfig timerCfg;
-    DAD_Timer_Initialize_us(50, TIMER_A3_BASE, &timerCfg);
-    DAD_Timer_Start(TIMER_A3_BASE);
-    while(!DAD_Timer_Has_Finished(TIMER_A3_BASE));
+    DAD_Timer_Initialize_us(50, TIMER_A2_BASE, &timerCfg);
+    DAD_Timer_Start(TIMER_A2_BASE);
+    while(!DAD_Timer_Has_Finished(TIMER_A2_BASE));
 }
 
 void DAD_microSD_InitUART(DAD_UART_Struct* uartStruct){
@@ -34,7 +34,7 @@ void DAD_microSD_InitUART(DAD_UART_Struct* uartStruct){
     DAD_UART_Write_Char(uartStruct, 13);        // Carriage return
 }
 
-bool DAD_microSD_openFile(unsigned char* fileName, DAD_UART_Struct* uartStruct){
+bool DAD_microSD_openFile(char* fileName, DAD_UART_Struct* uartStruct){
     // Check name size
     if(strlen(fileName) > 12)
         return false;
@@ -42,7 +42,7 @@ bool DAD_microSD_openFile(unsigned char* fileName, DAD_UART_Struct* uartStruct){
     DAD_microSD_enterCMD(uartStruct);
 
     // Append to file
-    unsigned char command[20] = "append ";
+    char command[20] = "append ";
     strcat(command, fileName);                  // concat fileName into command
     DAD_UART_Write_Str(uartStruct, command);    // Call command to begin writing to fileName
     DAD_UART_Write_Char(uartStruct, 13);        // Carriage return
@@ -52,7 +52,7 @@ bool DAD_microSD_openFile(unsigned char* fileName, DAD_UART_Struct* uartStruct){
     return true;
 }
 
-bool DAD_microSD_Write_CSV(unsigned char* fileName, unsigned char** message, uint16_t messageLen, DAD_UART_Struct* uartStruct){
+bool DAD_microSD_Write_CSV(char* fileName, char** message, uint16_t messageLen, DAD_UART_Struct* uartStruct){
     // Check that file was opened
     if(DAD_microSD_openFile(fileName, uartStruct)){
         // Write message
@@ -68,3 +68,6 @@ bool DAD_microSD_Write_CSV(unsigned char* fileName, unsigned char** message, uin
     return false;
 }
 
+void DAD_microSD_Write(char* message, DAD_UART_Struct* uartStruct){
+    DAD_UART_Write_Str(uartStruct, message);
+}

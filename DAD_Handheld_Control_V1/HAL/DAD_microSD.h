@@ -28,13 +28,15 @@ void DAD_microSD_InitUART(DAD_UART_Struct* uartStruct);
     // If filename does not exist, file is created
     // Parameter - array of chars for file name. 8.3 format
     // Parameter - structure for using the UART HAL
-bool DAD_microSD_openFile(unsigned char* fileName, DAD_UART_Struct* uartStruct);
+bool DAD_microSD_openFile(char* fileName, DAD_UART_Struct* uartStruct);
 
 // Write to file
     // TODO write
     // Parameter - array of chars for file name. 8.3 format
     // Parameter - array of strs for message. writes as CSV
     // Parameter - structure for using the UART HALs
-bool DAD_microSD_Write_CSV(unsigned char* fileName, unsigned char** message, uint16_t messageLen, DAD_UART_Struct* uartStruct);
+bool DAD_microSD_Write_CSV(char* fileName, char** message, uint16_t messageLen, DAD_UART_Struct* uartStruct);
+
+void DAD_microSD_Write(char* message, DAD_UART_Struct* uartStruct);
 
 #endif /* HAL_DAD_MICROSD_H_ */

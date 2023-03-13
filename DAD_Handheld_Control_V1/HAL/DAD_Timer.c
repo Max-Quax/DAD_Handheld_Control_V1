@@ -125,6 +125,12 @@ double DAD_Timer_Get_Time(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig)
     return 0;                                                   // Default :/
 }
 
+void DAD_Timer_Restart(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig){
+    DAD_Timer_Stop(timerBase, timerConfig);
+    MAP_Timer_A_configureUpMode(timerBase, timerConfig);
+    DAD_Timer_Start(timerBase);
+}
+
 static void DAD_Timer_Set_Interrupt(uint32_t timerBase){
     // Decide which interrupt
     uint32_t interruptNum;

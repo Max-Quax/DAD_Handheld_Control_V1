@@ -33,6 +33,7 @@ int main(void)
     FSMstate state = STARTUP;
     while(true){
         DAD_FSM_control(&state);    // Handle everything
+        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);    // Debug - check that it's not hung up
         MAP_PCM_gotoLPM0();         // Go back to sleep until next interrupt
     }
 }

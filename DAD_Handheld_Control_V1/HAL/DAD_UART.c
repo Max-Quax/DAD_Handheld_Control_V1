@@ -47,7 +47,7 @@ void DAD_UART_Init(DAD_UART_Struct* UARTPtr, size_t bufferSize){
     MAP_UART_enableModule(UARTPtr->moduleInst);
 
     // Init buffer
-    UARTPtr->bufPtr = (unsigned char*)malloc(bufferSize * sizeof(unsigned char));
+    UARTPtr->bufPtr = (char*)malloc(bufferSize * sizeof(char));
     modifiedRingBuf_construct(&(UARTPtr->UART_Buffer), UARTPtr->bufPtr, bufferSize);
 
     // Choose which interrupt, which pins to set
@@ -86,12 +86,12 @@ void DAD_UART_Init(DAD_UART_Struct* UARTPtr, size_t bufferSize){
 }
 
 // Write single char
-void DAD_UART_Write_Char(DAD_UART_Struct* UARTPtr, unsigned char c){
+void DAD_UART_Write_Char(DAD_UART_Struct* UARTPtr, char c){
     MAP_UART_transmitData(UARTPtr->moduleInst, c);
 }
 
 // Write full message
-void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, unsigned char* msg){
+void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, char* msg){
     uint16_t msgLength = strlen(msg);
     uint16_t i;
     for(i = 0; i < msgLength; i++){
@@ -110,13 +110,17 @@ bool DAD_UART_HasChar(DAD_UART_Struct* UARTPtr){
     return modifiedRingBuf_getCount(&(UARTPtr->UART_Buffer));
 }
 
-unsigned char DAD_UART_GetChar(DAD_UART_Struct* UARTPtr){
-    unsigned char c = '\0';
+char DAD_UART_GetChar(DAD_UART_Struct* UARTPtr){
+    char c = '\0';
     modifiedRingBuf_get(&(UARTPtr->UART_Buffer), &c);
     return c;
 }
 
-void DAD_UART_Peek(DAD_UART_Struct* UARTPtr, unsigned char* c){
+void DAD_UART_GetCharPtr(DAD_UART_Struct* UARTPtr, char* c){
+    modifiedRingBuf_get(&(UARTPtr->UART_Buffer), c);
+}
+
+void DAD_UART_Peek(DAD_UART_Struct* UARTPtr, char* c){
     modifiedRingBuf_peek(&(UARTPtr->UART_Buffer), c);
 }
 
