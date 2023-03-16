@@ -48,7 +48,7 @@ void DAD_FSM_control(FSMstate *state){
         DAD_UART_DisableInt(&(interfaceStruct.RSA_UART_struct));
 
         // Handle all data in the RSA rx buffer
-        writeToPeriphs(&interfaceStruct);
+        handleRSABuffer(&interfaceStruct);
 
         // Finished writing to HMI/microSD, start listening again
         *state = RSA_READ;

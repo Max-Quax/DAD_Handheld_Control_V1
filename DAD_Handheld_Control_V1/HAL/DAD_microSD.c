@@ -9,8 +9,7 @@
 
 static void DAD_microSD_enterCMD(DAD_UART_Struct* uartStruct){
     // Open openLog microSD controller in cmd mode
-    DAD_UART_Write_Str(uartStruct, "&&&");
-    DAD_UART_Write_Str(uartStruct, "&&&");
+    DAD_UART_Write_Str(uartStruct, "&&&&&");
     DAD_UART_Write_Char(uartStruct, 13);        // Carriage return
 
     // blocks until cmd mode was entered
