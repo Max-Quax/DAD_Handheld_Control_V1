@@ -20,6 +20,9 @@
 #include "HAL/DAD_UART.h"
 #include "HAL/DAD_microSD.h"
 
+// Debug macro
+#define DEBUG
+
 // UART Macros
 #define RSA_BAUD 9600
 #define RSA_BUFFER_SIZE 1024
@@ -59,7 +62,7 @@ typedef struct DAD_Interface_Struct_{
     // Buffer pointers for buffering sound/vibration data
         // Buffers are loaded up with data.
         // Data from buffer is then sent all at once
-    float freqBuf [NUM_OF_PORTS][FFT_SIZE];
+    float freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
 
 } DAD_Interface_Struct;
 
@@ -95,7 +98,9 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct*
 
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct);
 
+#ifdef DEBUG
 static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct);
+#endif
 
 // TODO write commands to RSA
 // TODO read command from HMI

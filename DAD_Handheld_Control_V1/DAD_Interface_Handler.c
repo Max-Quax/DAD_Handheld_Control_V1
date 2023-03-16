@@ -31,10 +31,12 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
     // Wakeup Timer Init
     DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &(interfaceStruct->FSMtimerConfig));
 
-    // Init buffs
-    int i;
+    // Init buffs with all zeros
+    int i, j;
     for(i = 0; i < NUM_OF_PORTS; i++){
-        interfaceStruct->freqBuf[i] = NULL;
+        for(j = 0; j < SIZE_OF_FFT; j++){
+            interfaceStruct->freqBuf[i][j] = 0;
+        }
     }
 }
 
@@ -95,8 +97,10 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
         return;
     }
 
+    #ifdef DEBUG
     // Debug - Log Packet
-    // logDebug(packet, interfaceStruct);
+    logDebug(packet, interfaceStruct);
+    #endif
 
     // Interpret packet
     packetStatus PKstatus = (packetStatus)((packet[0] & STATUS_MASK) >> 3);
@@ -260,25 +264,11 @@ static void sensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     // Write to log
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
     interfaceStruct->currentPort = 255; // Record that current file is log.txt
-    // Free buffer - only useful for mic and vib
-    free(interfaceStruct->freqBuf[port]);
-    interfaceStruct->freqBuf[port] = NULL;
 }
 
 static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct){
     // If not allocated, calloc();
     uint8_t port = interfaceStruct->currentPort;
-//    if(interfaceStruct->freqBuf[port] == NULL){
-//        interfaceStruct->freqBuf[port] = calloc(SIZE_OF_FFT+1, sizeof(float));
-//
-//        // Report error if allocation didn't work
-//        if(interfaceStruct->freqBuf[port] == NULL){
-//            sprintf(interfaceStruct->fileName, "log.txt");
-//            DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
-//            DAD_microSD_Write("Error: Insufficient mem for buffer allocation\n", &interfaceStruct->microSD_UART);
-//            return false;
-//        }
-//    }
 
     // TODO condition data
     // Add packet to buffer
@@ -296,12 +286,17 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct*
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
     DAD_microSD_Write("\n\nFFT Start\n", &interfaceStruct->microSD_UART);
     int i;
-    for(i = 0; i < SIZE_OF_FFT; i++){
+    for(i = 0; i < SIZE_OF_FFT-2; i++){
         // TODO figure out how to send freq data to HMI
         writeToHMI(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
         writeToMicroSD(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
     }
     DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
+
+    #ifdef DEBUG
+    // Debug
+    DAD_UART_Write_Str(&interfaceStruct->RSA_UART_struct, "Wrote FFT to periphs\n");
+    #endif
 }
 
 static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
@@ -329,7 +324,7 @@ static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct
     }
 }
 
-
+#ifdef DEBUG
 // Write everything to log file
 static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct){
     // Open log file
@@ -348,3 +343,4 @@ static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct){
     }
     DAD_UART_Write_Str(&interfaceStruct->microSD_UART, "\n");
 }
+#endif
