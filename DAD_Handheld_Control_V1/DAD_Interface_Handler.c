@@ -42,7 +42,7 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     // Read individual packets from buffer
-    while(PACKET_SIZE + 1<= DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
+    while(PACKET_SIZE + 1 <= DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
         handlePacket(interfaceStruct);
 
         // TODO write moving average/average intensity
@@ -63,7 +63,7 @@ static void *intToString(int num) {
 
 // Constructs packet from data in UART HAL's ring buffer
     // Buffer was originally constructed as a FIFO ring buffer.
-static bool constructPacket(uint8_t* packet, DAD_UART_Struct* UARTptr){
+static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTptr){
     // Remove any "end packet" characters
     char c = 255;
     while(c == 255 && DAD_UART_HasChar(UARTptr)){
@@ -73,9 +73,12 @@ static bool constructPacket(uint8_t* packet, DAD_UART_Struct* UARTptr){
     // Construct Packet
     if(DAD_UART_NumCharsInBuffer(UARTptr) >= PACKET_SIZE){  // Check number of chars in buffer
         int i;
-        for(i = 0; i < PACKET_SIZE; i++){
-            packet[i] = c;
+        packet[0] = c;                      // Fencepost to keep from reading too far
+        for(i = 1; i < PACKET_SIZE; i++){
             c = DAD_UART_GetChar(UARTptr);
+            packet[i] = c;
+            if (packet[i] == 255)
+                return false;
         }
         return true;
     }
@@ -94,6 +97,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 
         // Log error to microSD.
         DAD_microSD_Write("Error: Failed to construct packet\n", &interfaceStruct->microSD_UART); // A packet, misread, could have been.
+        //logDebug(packet, interfaceStruct);
         return;
     }
 
@@ -133,7 +137,9 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     }
 }
 
-static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct){
+static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
+
+    #ifndef WRITE_TO_ONLY_ONE_FILE                       // Disables writing to multiple files
     // Check that we are writing to the right file
     if(interfaceStruct->currentPort != port ){           // Compare data type to the file that is currently being written to
         // Set port
@@ -143,6 +149,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
         // Open the correct file
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
     }
+    #endif
 
     // Write data to periphs
     switch(type)
@@ -272,9 +279,8 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct*
 
     // TODO condition data
     // Add packet to buffer
-    uint8_t packetOrderNum = interfaceStruct->freqBuf[port][packet[PACKET_SIZE - 1]];   // number in packet order
-    interfaceStruct->freqBuf[port][packetOrderNum*2] = packet[1];                       // just unconditioned data for now
-    interfaceStruct->freqBuf[port][packetOrderNum*2+1] = packet[2];                     // just unconditioned data for now
+    interfaceStruct->freqBuf[port][packet[PACKET_SIZE - 1]*2] = packet[1];                       // just unconditioned data for now
+    interfaceStruct->freqBuf[port][packet[PACKET_SIZE - 1]*2+1] = packet[2];                     // just unconditioned data for now
 
     // TODO deal with dropped frequency packets
         // Currently assumes no packet is dropped
@@ -292,11 +298,6 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
         writeToMicroSD(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
     }
     DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
-
-    #ifdef DEBUG
-    // Debug
-    DAD_UART_Write_Str(&interfaceStruct->RSA_UART_struct, "Wrote FFT to periphs\n");
-    #endif
 }
 
 static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){

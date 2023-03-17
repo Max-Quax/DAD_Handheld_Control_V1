@@ -20,8 +20,9 @@
 #include "HAL/DAD_UART.h"
 #include "HAL/DAD_microSD.h"
 
-// Debug macro
+// Debug macros
 #define DEBUG
+#define WRITE_TO_ONLY_ONE_FILE
 
 // UART Macros
 #define RSA_BAUD 9600

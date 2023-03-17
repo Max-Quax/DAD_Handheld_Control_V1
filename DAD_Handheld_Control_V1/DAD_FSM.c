@@ -26,7 +26,7 @@ void DAD_FSM_control(FSMstate *state){
             // or
             // when timer expires, start writing to HMI and microSD
         if(DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) &&
-                PACKET_SIZE*4 < DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
+                RSA_BUFFER_SIZE*.75 < DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
             *state = WRITE_TO_PERIPH;
         }
 
