@@ -12,7 +12,7 @@
 #include <HAL/DAD_UART.h>
 #include <HAL/DAD_Timer.h>
 
-#define MICRO_SD_BAUD_RATE 9600
+#define MICRO_SD_BAUD_RATE 57600
 #define MICRO_SD_MODULE_INSTANCE EUSCI_A1_BASE  // Module instance - module A0 for debug
 #define MICRO_SD_CMD_DELAY 50                   // Wait until command mode is entered
 

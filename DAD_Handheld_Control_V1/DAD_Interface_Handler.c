@@ -38,6 +38,9 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
             interfaceStruct->freqBuf[i][j] = 0;
         }
     }
+
+    // Disables HMI communication to Handheld mcu
+    DAD_UART_DisableInt(&(interfaceStruct->HMI_UART_struct));   // TODO remove this
 }
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
@@ -49,8 +52,8 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
 
     }
 
-    // Flush out remaining chars from read buffer
-    while(DAD_UART_HasChar(&interfaceStruct->RSA_UART_struct)){
+    // Flush out remaining chars from read buffer.
+    while(DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct) > 0){
         DAD_UART_GetChar(&interfaceStruct->RSA_UART_struct);
     }
 }
@@ -70,8 +73,12 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
         c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
     }
 
+    #ifdef DEBUG
+    if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
+    #endif
+
     // Construct Packet
-    if(DAD_UART_NumCharsInBuffer(UARTptr) >= PACKET_SIZE){  // Check number of chars in buffer
+    if(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
         int i;
         packet[0] = c;                      // Fencepost to keep from reading too far
         for(i = 1; i < PACKET_SIZE; i++){
@@ -81,6 +88,7 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
                 return false;
         }
         return true;
+
     }
     return false;
 }
@@ -88,10 +96,10 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
 static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 {
     // Construct packet
-    uint8_t packet[PACKET_SIZE+1];
+    uint8_t packet[PACKET_SIZE];
     if(!constructPacket(packet, &interfaceStruct->RSA_UART_struct)){                            // If construct packet fails
         // Go to log file
-        sprintf(interfaceStruct->fileName, "log.txt");
+        strcpy(interfaceStruct->fileName, "log.txt");
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
         interfaceStruct->currentPort = 255;
 
@@ -118,7 +126,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
             sensorDisconnect(port, type, interfaceStruct);
             break;
         case CON_D:
-            handleData(port, type, packet, interfaceStruct);
+            handleData(port, type, packet, interfaceStruct); // TODO this causes program to break
             break;
         case CON_ND:
 
@@ -150,6 +158,11 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
     }
     #endif
+
+    #ifdef WRITE_TO_ONLY_ONE_FILE
+    interfaceStruct->currentPort = port;
+    #endif
+
 
     // Write data to periphs
     switch(type)
@@ -266,43 +279,49 @@ static void sensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     // Write to data file
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
     // Open the log file
-    sprintf(interfaceStruct->fileName, "log.txt");
+    strcpy(interfaceStruct->fileName, "log.txt");
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
     // Write to log
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
     interfaceStruct->currentPort = 255; // Record that current file is log.txt
 }
 
-static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct){
+static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
     // If not allocated, calloc();
     uint8_t port = interfaceStruct->currentPort;
+    uint16_t index = packet[PACKET_SIZE - 1];               // Promote to 16 bit for multiplication
 
     // TODO condition data
     // Add packet to buffer
-    interfaceStruct->freqBuf[port][packet[PACKET_SIZE - 1]*2] = packet[1];                       // just unconditioned data for now
-    interfaceStruct->freqBuf[port][packet[PACKET_SIZE - 1]*2+1] = packet[2];                     // just unconditioned data for now
+    if(index * 2 + 1 < SIZE_OF_FFT && port < NUM_OF_PORTS){
+        interfaceStruct->freqBuf[port][index*2] = packet[1];    // just unconditioned data for now
+        interfaceStruct->freqBuf[port][index*2+1] = packet[2];  // just unconditioned data for now
 
+        return true;
+    }
     // TODO deal with dropped frequency packets
         // Currently assumes no packet is dropped
         // Currently assumes last packet in order is the last received
         // Currently assumes all data in buffer is up to data
-    return true;
+    return false;
 }
 
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
-    DAD_microSD_Write("\n\nFFT Start\n", &interfaceStruct->microSD_UART);
-    int i;
-    for(i = 0; i < SIZE_OF_FFT-2; i++){
-        // TODO figure out how to send freq data to HMI
-        writeToHMI(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
-        writeToMicroSD(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
+    if(interfaceStruct->currentPort < NUM_OF_PORTS){
+        DAD_microSD_Write("\n\nFFT Start\n", &interfaceStruct->microSD_UART);
+        int i;
+        for(i = 0; i < SIZE_OF_FFT-2; i++){
+            // TODO figure out how to send freq data to HMI
+            writeToHMI(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
+            writeToMicroSD(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
+        }
+        DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
-    DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
 }
 
 static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
     // Open the microSD log file
-    sprintf(interfaceStruct->fileName, "log.txt");
+    strcpy(interfaceStruct->fileName, "log.txt");
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
     interfaceStruct->currentPort = 255;
 
@@ -330,7 +349,7 @@ static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct
 static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct){
     // Open log file
     if(strcmp(interfaceStruct->fileName, "log.txt") != 0){  // Debug - write everything to log
-        sprintf(interfaceStruct->fileName, "log.txt");
+        strcpy(interfaceStruct->fileName, "log.txt");
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
         interfaceStruct->currentPort = 255;
     }

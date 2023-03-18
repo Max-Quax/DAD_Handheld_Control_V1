@@ -21,7 +21,7 @@
 #include "HAL/DAD_microSD.h"
 
 // Debug macros
-#define DEBUG
+// #define DEBUG
 #define WRITE_TO_ONLY_ONE_FILE
 
 // UART Macros

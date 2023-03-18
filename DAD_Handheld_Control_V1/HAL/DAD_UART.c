@@ -107,7 +107,7 @@ void DAD_UART_Stop(DAD_UART_Struct* UARTPtr){
 }
 
 bool DAD_UART_HasChar(DAD_UART_Struct* UARTPtr){
-    return modifiedRingBuf_getCount(&(UARTPtr->UART_Buffer));
+    return modifiedRingBuf_getCount(&(UARTPtr->UART_Buffer)) > 0;
 }
 
 char DAD_UART_GetChar(DAD_UART_Struct* UARTPtr){
