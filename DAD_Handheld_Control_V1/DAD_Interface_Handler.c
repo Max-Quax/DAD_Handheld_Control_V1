@@ -64,35 +64,6 @@ static void *intToString(int num) {
     return str;
 }
 
-// Constructs packet from data in UART HAL's ring buffer
-    // Buffer was originally constructed as a FIFO ring buffer.
-static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTptr){
-    // Remove any "end packet" characters
-    char c = 255;
-    while(c == 255 && DAD_UART_HasChar(UARTptr)){
-        c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
-    }
-
-    #ifdef DEBUG
-    if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
-    #endif
-
-    // Construct Packet
-    if(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
-        int i;
-        packet[0] = c;                      // Fencepost to keep from reading too far
-        for(i = 1; i < PACKET_SIZE; i++){
-            c = DAD_UART_GetChar(UARTptr);
-            packet[i] = c;
-            if (packet[i] == 255)
-                return false;
-        }
-        return true;
-
-    }
-    return false;
-}
-
 static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 {
     // Construct packet
@@ -105,7 +76,12 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 
         // Log error to microSD.
         DAD_microSD_Write("Error: Failed to construct packet\n", &interfaceStruct->microSD_UART); // A packet, misread, could have been.
-        //logDebug(packet, interfaceStruct);
+
+        // Remove the rest of broken packet
+        char c = 0;
+        while(c != 255 && DAD_UART_HasChar(&interfaceStruct->RSA_UART_struct)){
+            c = DAD_UART_GetChar(&interfaceStruct->RSA_UART_struct);                      // remove char at front of buffer
+        }
         return;
     }
 
@@ -143,6 +119,36 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
         default:
             DAD_microSD_Write("bad packet\n", &interfaceStruct->microSD_UART);
     }
+}
+
+
+// Constructs packet from data in UART HAL's ring buffer
+    // Buffer was originally constructed as a FIFO ring buffer.
+static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTptr){
+    // Remove any "end packet" characters
+    char c = 255;
+    while(c == 255 && DAD_UART_HasChar(UARTptr)){
+        c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
+    }
+
+    #ifdef DEBUG
+    if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
+    #endif
+
+    // Construct Packet
+    if(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
+        int i;
+        packet[0] = c;                      // Fencepost to keep from reading too far
+        for(i = 1; i < PACKET_SIZE; i++){
+            c = DAD_UART_GetChar(UARTptr);
+            packet[i] = c;
+            if (packet[i] == 255)
+                return false;
+        }
+        return true;
+
+    }
+    return false;
 }
 
 static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
@@ -226,17 +232,13 @@ static void writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct*
     char message[MESSAGE_LEN];
     switch(type){
     case TEMP:
-        sprintf(message, "%d F, %d\n", data, interfaceStruct->currentPort + 1);   // port added for debug
+        sprintf(message, "%d, %dF\n", interfaceStruct->currentPort + 1, data);      // port added for debug
         break;
     case HUM:
-        sprintf(message, "%d %%, %d\n", data, interfaceStruct->currentPort + 1);   // port added for debug
+        sprintf(message, "%d, %d%%\n", interfaceStruct->currentPort + 1, data);     // port added for debug
         break;
-    case VIB:
-        sprintf(message, "%d dB, %d\n", data, interfaceStruct->currentPort + 1);   // port added for debug
-        break;
+    case VIB:   // Frequency data should be written to microSD using writeFreqToPeriphs
     case MIC:
-        sprintf(message, "%d dB, %d\n", data, interfaceStruct->currentPort + 1);   // port added for debug
-        break;
     default:
         sprintf(message, "Error: Writing error - %d %%, %d\n", data, interfaceStruct->currentPort + 1);   // error catching
     }
@@ -309,11 +311,15 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* i
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
         DAD_microSD_Write("\n\nFFT Start\n", &interfaceStruct->microSD_UART);
+        char microSDmsg[17];
         int i;
         for(i = 0; i < SIZE_OF_FFT-2; i++){
             // TODO figure out how to send freq data to HMI
             writeToHMI(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
-            writeToMicroSD(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
+
+            // Write to microSD
+            sprintf(microSDmsg, "%d, %ddB\n", interfaceStruct->freqBuf[interfaceStruct->currentPort][i], interfaceStruct->currentPort + 1);
+            DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
