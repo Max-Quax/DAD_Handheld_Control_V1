@@ -25,8 +25,9 @@ void DAD_FSM_control(FSMstate *state){
             // Wait for buffer to fill or vibe/sound packets to finish sending
             // or
             // when timer expires, start writing to HMI and microSD
-        if(DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) ||
-                RSA_BUFFER_SIZE*.75 < DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
+        //(DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && MIN_READ_COUNT <
+        //if(RSA_BUFFER_SIZE*.75 < DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
+        if(RSA_BUFFER_SIZE ==  DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
             *state = WRITE_TO_PERIPH;
         }
 
