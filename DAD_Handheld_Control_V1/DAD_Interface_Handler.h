@@ -27,7 +27,7 @@
 // UART Macros
 #define RSA_BAUD 9600
 #define RSA_BUFFER_SIZE 1024
-#define HMI_BAUD 9600
+#define HMI_BAUD 57600
 #define HMI_BUFFER_SIZE 1024
 #define MAX_FILENAME_SIZE 12
 
@@ -40,7 +40,7 @@
 #define PACKET_TYPE_MASK 7
 #define PORT_MASK 224
 #define PACKET_SIZE 4                                       // Excludes end char 255
-#define MESSAGE_LEN (sizeof(char)*(PACKET_SIZE) + 1)    // size of message
+#define MESSAGE_LEN (sizeof(char)*(PACKET_SIZE) + 1)        // size of message
 #define NUM_OF_PORTS 8                                      // Number of ports
 #define SIZE_OF_FFT 512
 
@@ -63,7 +63,7 @@ typedef struct DAD_Interface_Struct_{
     // Buffer pointers for buffering sound/vibration data
         // Buffers are loaded up with data.
         // Data from buffer is then sent all at once
-    float freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
+    uint8_t freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
 
 } DAD_Interface_Struct;
 

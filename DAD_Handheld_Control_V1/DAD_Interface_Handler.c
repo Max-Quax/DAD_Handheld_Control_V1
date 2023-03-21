@@ -310,19 +310,33 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* i
 
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
-        DAD_microSD_Write("\n\nFFT Start\n", &interfaceStruct->microSD_UART);
+        uint8_t port = interfaceStruct->currentPort;
         char microSDmsg[17];
+        sprintf(microSDmsg, "\n\nFFT Start: port %d", port + 1);
+        DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
+
+
+        char debugMsg [25];
+        uint8_t data;
         int i;
         for(i = 0; i < SIZE_OF_FFT-2; i++){
-            // TODO figure out how to send freq data to HMI
-            writeToHMI(interfaceStruct->freqBuf[interfaceStruct->currentPort][i], type, interfaceStruct);
+            data = interfaceStruct->freqBuf[port][i];
+
+            // Write to HMI
+            sprintf(debugMsg, "add 25,0,%d", data);
+            DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, debugMsg);
+            DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+            DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+            DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
 
             // Write to microSD
-            sprintf(microSDmsg, "%d, %ddB\n", interfaceStruct->freqBuf[interfaceStruct->currentPort][i], interfaceStruct->currentPort + 1);
+            sprintf(microSDmsg, "%d,", data);
             DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
+
+
 }
 
 static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
