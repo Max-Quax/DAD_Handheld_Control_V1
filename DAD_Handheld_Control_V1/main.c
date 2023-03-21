@@ -13,7 +13,7 @@
 
     // TODO Test freq
     // TODO average intensity, moving averages
-    // TODO implement transmits
+    // TODO implement transmits to RSA
 
 int main(void)
 {

@@ -12,17 +12,21 @@
 #define DAD_INTERFACE_HANDLER_H_
 
 // Standard includes
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+// Utils
+#include <string.h>
+#include "DAD_Utils.h"
 
 // HAL Includes
 #include "HAL/DAD_UART.h"
 #include "HAL/DAD_microSD.h"
 
-// Debug macros
+// Configuration macros
 // #define DEBUG
 #define WRITE_TO_ONLY_ONE_FILE
+// #define USE_LUT
 
 // UART Macros
 #define RSA_BAUD 9600
@@ -33,7 +37,7 @@
 
 // Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#define FSM_TIMER_PERIOD 500            // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#define FSM_TIMER_PERIOD 250            // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // Packet Macros
 #define STATUS_MASK 24
@@ -43,6 +47,7 @@
 #define MESSAGE_LEN (sizeof(char)*(PACKET_SIZE) + 1)        // size of message
 #define NUM_OF_PORTS 8                                      // Number of ports
 #define SIZE_OF_FFT 512
+
 
 typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
 typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
@@ -65,6 +70,9 @@ typedef struct DAD_Interface_Struct_{
         // Data from buffer is then sent all at once
     uint8_t freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
 
+    // Lookup tables
+    DAD_utilsStruct utils;
+
 } DAD_Interface_Struct;
 
 // Initializes UART, timers necessary
@@ -82,17 +90,21 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct);
 // Processes data packet, sends data to peripherals
 static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct);
 
-// Write single packet of data to HMI
-static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
-
-// Writes single packet of data to microSD
-static void writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+// Handles packets of "connected, no data" type
+static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Handles packets of "message" type
 static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Report to HMI that sensor has been disconnected
 static void sensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Write single packet of data to HMI
+static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Writes single packet of data to microSD
+static void writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+
 
 // Add packet to frequency buffer
 static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct);
