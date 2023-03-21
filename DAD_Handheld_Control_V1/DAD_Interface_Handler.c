@@ -57,7 +57,7 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     // Read individual packets from buffer
-    while(PACKET_SIZE + 1 <= DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
+    while(PACKET_SIZE < DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
         handlePacket(interfaceStruct);
 
         // TODO write moving average/average intensity
@@ -165,6 +165,11 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
         return true;
 
     }
+
+
+    // Flush out loose bytes
+    while(DAD_UART_NumCharsInBuffer(UARTptr) > 0)
+        DAD_UART_GetChar(UARTptr);
 
     return false;
 }
@@ -356,7 +361,8 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
         // Write preamble to microSD
         uint8_t port = interfaceStruct->currentPort;
         char microSDmsg[17];
-        sprintf(microSDmsg, "\n\nFFT Start: port %d", port + 1);
+        (type == VIB) ? sprintf(microSDmsg, "\n\nFFT Vib, port %d: ", port + 1):
+                        sprintf(microSDmsg, "\n\nFFT Mic, port %d: ", port + 1);
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
 
         uint8_t data;
@@ -380,7 +386,10 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
         uint8_t port = interfaceStruct->currentPort;
         char microSDmsg[17];
-        sprintf(microSDmsg, "\n\nFFT Start: port %d", port + 1);
+
+        (type == VIB) ? sprintf(microSDmsg, "\n\nFFT Vib, port %d: ", port + 1):
+                sprintf(microSDmsg, "\n\nFFT Mic, port %d: ", port + 1);
+
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
 
 
