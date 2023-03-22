@@ -11,7 +11,7 @@
 // Interface includes
 #include "HAL/DAD_UART.h"
 
-typedef enum {STARTUP, RSA_READ, PROCESS_DATA, WRITE_TO_PERIPH} FSMstate;   // TODO add states as necessary
+typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH} FSMstate;   // TODO add states as necessary
 
 // Initializes interfaces, timers necessary for FSM use
 void DAD_FSM_init();

@@ -13,19 +13,24 @@
     // avoids having to go through sprintf every time
 void DAD_Utils_initFreqLUT(DAD_utilsStruct* utilsStruct){
     int i;
-    // Generate end characters
-    char endChars[4];
-    for(i = 0; i < 3; i++){
-        endChars[i] = 255;
-    }
+//    // Generate end characters
+//    char endChars[3];
+//    for(i = 0; i < 3; i++){
+//        endChars[i] = 255;
+//    }
+    //endChars[4] = '/0';
 
     for(i = 0; i < FREQ_LUT_SIZE; i++){
         // microSD LUT
         sprintf(utilsStruct->microSDFreqLUT[i], "%d,", i);
 
         // HMI LUT
-        sprintf(utilsStruct->HMIFreqLUT[i], "add %d,0,%d,", HMI_FFT_ID, i);
-        strcat(utilsStruct->HMIFreqLUT[i], endChars);
+        int j;
+        for(j = 0; j < HMI_LUT_WORD_SIZE + 1; j++){
+            utilsStruct->HMIFreqLUT[i][j] = '\0';
+        }
+        sprintf(utilsStruct->HMIFreqLUT[i], "add %d,0,%d", HMI_FFT_ID, i);
+//        strcat(utilsStruct->HMIFreqLUT[i], endChars);
     }
 }
 

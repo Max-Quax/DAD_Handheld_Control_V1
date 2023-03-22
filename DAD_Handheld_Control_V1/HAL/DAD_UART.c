@@ -180,7 +180,7 @@ void EUSCIA1_IRQHandler(void){
         modifiedRingBuf_put(UART1_BuffPtr, UART_receiveData(EUSCI_A1_BASE)); // Put received data at end of buffer
     }
 
-    //Clear all interrupts lol
+    //Clear all interrupts
     UART_clearInterruptFlag(EUSCI_A1_BASE, 0xFF);
 }
 

@@ -27,7 +27,6 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
     DAD_UART_Init(&interfaceStruct->RSA_UART_struct, RSA_BUFFER_SIZE);
 
     // HMI Interface init
-        // TODO test that this works
     DAD_UART_Set_Config(HMI_BAUD, EUSCI_A2_BASE, &interfaceStruct->HMI_UART_struct);
     DAD_UART_Init(&interfaceStruct->HMI_UART_struct, HMI_BUFFER_SIZE);
 
@@ -53,6 +52,12 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
 
     // Initialize Lookup tables
     DAD_Utils_initFreqLUT(&interfaceStruct->utils);
+
+    // Initialize timer for testing write time
+    #ifdef FREQ_WRITE_TIME_TEST
+    DAD_Timer_Initialize_ms(60000, TIMER_A1_BASE, &(interfaceStruct->FSMtimerConfig));
+    DAD_Timer_Start(TIMER_A1_BASE);
+    #endif
 }
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
@@ -70,16 +75,10 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     }
 }
 
-static void *intToString(int num) {
-    char str[PACKET_SIZE+1];
-    sprintf(str, "%d", num);
-    return str;
-}
-
 static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 {
     // Construct packet
-    uint8_t packet[PACKET_SIZE];
+    uint8_t packet[PACKET_SIZE + 1];
     if(!constructPacket(packet, &interfaceStruct->RSA_UART_struct)){                                // If construct packet fails
         // Go to log file
         strcpy(interfaceStruct->fileName, "log.txt");
@@ -114,18 +113,10 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
             sensorDisconnect(port, type, interfaceStruct);
             break;
         case CON_D:
-            handleData(port, type, packet, interfaceStruct); // TODO this causes program to break
+            handleData(port, type, packet, interfaceStruct);
             break;
         case CON_ND:
             handle_CON_ND(type, interfaceStruct);
-            // TODO watchdog for sensors that haven't updated in a while
-                // intended for debugging, updating HMI if sensor isn't sending anymore
-
-            //DAD_microSD_Write("CON_ND\n", &interfaceStruct->microSD_UART);    // TODO
-            //
-
-            // TODO HOME.f<sensornumber>.val=<0 for temp/hum, 1 for fft>
-
             break;
         case MSG:
             handleMessage(type, interfaceStruct);
@@ -145,15 +136,23 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
         c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
     }
 
-    #ifdef DEBUG
-    if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
-    #endif
-
     // Construct Packet
-    if(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
-        int i;
-        packet[0] = c;                                      // Fencepost to keep from reading too far
-        for(i = 1; i < PACKET_SIZE; i++){
+    while(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){    // Check number of chars in buffer
+        //c = DAD_UART_GetChar(UARTptr);                          // get next char
+
+        do
+        {
+            packet[0] = packet[1];
+            packet[1] = packet[2];
+            packet[2] = packet[3];
+            packet[3] = c;
+            c = DAD_UART_GetChar(UARTptr);
+        }while(c != 255);
+        if(c == 255)
+        {
+            return true;
+        }
+        /*for(i = 1; i < PACKET_SIZE; i++){
             DAD_UART_Peek(UARTptr, &c);
             if(c != 255){
                 packet[i] = c;
@@ -161,9 +160,8 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
             }
             else
                 return false;
-        }
-        return true;
-
+        }*/
+        //return true;
     }
 
 
@@ -172,6 +170,41 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
         DAD_UART_GetChar(UARTptr);
 
     return false;
+
+
+//    // Remove any "end packet" characters
+//        char c = 255;
+//        while(c == 255 && DAD_UART_HasChar(UARTptr)){
+//            c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
+//        }
+//
+//        #ifdef DEBUG
+//        if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
+//        #endif
+//
+//        // Construct Packet
+//        if(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
+//            int i;
+//            packet[0] = c;                                      // Fencepost to keep from reading too far
+//            for(i = 1; i < PACKET_SIZE; i++){
+//                DAD_UART_Peek(UARTptr, &c);
+//                if(c != 255){
+//                    packet[i] = c;
+//                    DAD_UART_GetChar(UARTptr);
+//                }
+//                else
+//                    return false;
+//            }
+//            return true;
+//        }
+//
+//
+//        // Flush out loose bytes
+//        while(DAD_UART_NumCharsInBuffer(UARTptr) > 0)
+//            DAD_UART_GetChar(UARTptr);
+//
+//        return false;
+
 }
 
 static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
@@ -196,7 +229,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 
         case TEMP:
             // TODO condition data
-            data = (packet[1] << 8) + packet[2];
+            data = ((packet[1] << 8) + packet[2]) % 110;
             writeToHMI(data, type, interfaceStruct);
             writeToMicroSD(data, type, interfaceStruct);
             break;
@@ -242,12 +275,11 @@ static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* int
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort+49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "Val.txt=\"");
 
-    char *val = intToString(data);
-    int i = 0;
-    while (val[i] != '\0') {
-        DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, val[i]);
-        i++;
-    }
+    // Write data to HMI
+    char val[7] = "";
+    sprintf(val, "%d", data);
+    DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, val);
+
 
     // Message conditioning
     if(type == TEMP)
@@ -265,14 +297,15 @@ static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* int
 }
 
 static void writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct){
+#ifdef WRITE_TO_MICRO_SD
     // Construct message
     char message[MESSAGE_LEN];
     switch(type){
     case TEMP:
-        sprintf(message, "%d, %dF\n", interfaceStruct->currentPort + 1, data);      // port added for debug
+        sprintf(message, "p%d, Temp, %dF\n", interfaceStruct->currentPort + 1, data);      // port added for debug
         break;
     case HUM:
-        sprintf(message, "%d, %d%%\n", interfaceStruct->currentPort + 1, data);     // port added for debug
+        sprintf(message, "p%d, Hum, %d%%\n", interfaceStruct->currentPort + 1, data);     // port added for debug
         break;
     case VIB:   // Frequency data should be written to microSD using writeFreqToPeriphs
     case MIC:
@@ -282,7 +315,9 @@ static void writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct*
 
     // Write data to microSD
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
+#endif
 }
+
 
 static void sensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct)
 {
@@ -357,12 +392,15 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* i
 
 #ifdef USE_LUT
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
+    #ifdef FREQ_WRITE_TIME_TEST
+    DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
+    #endif
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
         // Write preamble to microSD
         uint8_t port = interfaceStruct->currentPort;
         char microSDmsg[17];
-        (type == VIB) ? sprintf(microSDmsg, "\n\nFFT Vib, port %d: ", port + 1):
-                        sprintf(microSDmsg, "\n\nFFT Mic, port %d: ", port + 1);
+        (type == VIB) ? sprintf(microSDmsg, "\np%d, Vib, ", port + 1):
+                        sprintf(microSDmsg, "\np%d, Mic, ", port + 1);
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
 
         uint8_t data;
@@ -372,23 +410,35 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
 
             // Write to HMI
             DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, DAD_Utils_getHMIStr(data, &interfaceStruct->utils));
+            DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+            DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+            DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
 
             // Write to microSD
             DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->utils), &interfaceStruct->microSD_UART);
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
+    #ifdef FREQ_WRITE_TIME_TEST
+    float timeElapsed;
+    timeElapsed = DAD_Timer_Stop(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
+    if(true);
+    #endif
 }
 #endif
 
 #ifndef USE_LUT
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
+    #ifdef FREQ_WRITE_TIME_TEST
+    DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
+    #endif
+
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
         uint8_t port = interfaceStruct->currentPort;
         char microSDmsg[17];
 
-        (type == VIB) ? sprintf(microSDmsg, "\n\nFFT Vib, port %d: ", port + 1):
-                sprintf(microSDmsg, "\n\nFFT Mic, port %d: ", port + 1);
+        (type == VIB) ? sprintf(microSDmsg, "\np%d, Vib, ", port + 1):
+                sprintf(microSDmsg, "\np%d, Mic, ", port + 1);
 
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
 
@@ -398,8 +448,6 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
         uint16_t i;
         for(i = 0; i < SIZE_OF_FFT-2; i++){
             data = interfaceStruct->freqBuf[port][i];
-
-
 
             // Write to HMI
             sprintf(debugMsg, "add %d,0,%d", HMI_FFT_ID, data);
@@ -414,6 +462,11 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
+    #ifdef FREQ_WRITE_TIME_TEST
+    float timeElapsed;
+    timeElapsed = DAD_Timer_Stop(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
+    if(true);
+    #endif
 }
 #endif
 
@@ -462,3 +515,9 @@ static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct){
     DAD_UART_Write_Str(&interfaceStruct->microSD_UART, "\n");
 }
 #endif
+
+//// Find out which FFT to run
+//static HMIpage getPage(DAD_Interface_Struct* interfaceStruct){
+//    // TODO
+//    while(interfaceStruct)
+//}

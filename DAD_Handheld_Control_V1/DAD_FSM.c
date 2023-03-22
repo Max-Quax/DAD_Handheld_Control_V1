@@ -27,8 +27,8 @@ void DAD_FSM_control(FSMstate *state){
             // when timer expires, start writing to HMI and microSD
         //(DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && MIN_READ_COUNT <
         //if(RSA_BUFFER_SIZE*.75 < DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
-        if(RSA_BUFFER_SIZE ==  DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
-            *state = WRITE_TO_PERIPH;
+        if((DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct) >= 10)|| RSA_BUFFER_SIZE ==  DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
+            *state = HANDLE_PERIPH;
         }
 
         // Debug block
@@ -44,16 +44,24 @@ void DAD_FSM_control(FSMstate *state){
         */
 
         break;
-    case WRITE_TO_PERIPH:
+    case HANDLE_PERIPH:
         // Disable RSA UART interrupts, ignore all UART input until buffer empty
-        DAD_UART_DisableInt(&(interfaceStruct.RSA_UART_struct));
+        DAD_UART_DisableInt(&interfaceStruct.RSA_UART_struct);
+        DAD_UART_DisableInt(&interfaceStruct.HMI_UART_struct);
 
         // Handle all data in the RSA rx buffer
         handleRSABuffer(&interfaceStruct);
+//        char message[8] = "";
+//        while(DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct) > 0){
+//            sprintf(message, "%d, ", DAD_UART_GetChar(&interfaceStruct.RSA_UART_struct));
+//            DAD_microSD_Write(message, &interfaceStruct.microSD_UART);
+//        }
+//        DAD_microSD_Write("\n\n", &interfaceStruct.microSD_UART);
 
         // Finished writing to HMI/microSD, start listening again
         *state = RSA_READ;
-        DAD_UART_EnableInt(&(interfaceStruct.RSA_UART_struct));
+        DAD_UART_EnableInt(&interfaceStruct.RSA_UART_struct);
+        DAD_UART_EnableInt(&interfaceStruct.HMI_UART_struct);
         DAD_Timer_Start(FSM_TIMER_HANDLE);
     break;
 

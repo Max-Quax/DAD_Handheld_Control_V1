@@ -21,8 +21,8 @@
 
 
 #define FREQ_LUT_SIZE           512
-#define MICROSD_LUT_WORD_SIZE   5
-#define HMI_LUT_WORD_SIZE       19
+#define MICROSD_LUT_WORD_SIZE   7
+#define HMI_LUT_WORD_SIZE       25
 #define HMI_FFT_ID 10
 
 typedef struct DAD_utilsStruct_{

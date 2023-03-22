@@ -26,31 +26,34 @@
 // Configuration macros
 // #define DEBUG
 #define WRITE_TO_ONLY_ONE_FILE
-// #define USE_LUT
+// #define FREQ_WRITE_TIME_TEST
+#define USE_LUT
+// #define WRITE_TO_MICRO_SD
 
 // UART Macros
 #define RSA_BAUD 9600
-#define RSA_BUFFER_SIZE 512
+#define RSA_BUFFER_SIZE 515
 #define HMI_BAUD 57600
 #define HMI_BUFFER_SIZE 1024
 #define MAX_FILENAME_SIZE 12
 
 // Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#define FSM_TIMER_PERIOD 500            // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#define FSM_TIMER_PERIOD 1000                               // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // Packet Macros
 #define STATUS_MASK 24
 #define PACKET_TYPE_MASK 7
 #define PORT_MASK 224
 #define PACKET_SIZE 4                                       // Excludes end char 255
-#define MESSAGE_LEN (sizeof(char)*(PACKET_SIZE) + 1)        // size of message
+#define MESSAGE_LEN (sizeof(char)*(PACKET_SIZE) + 2)        // size of message
 #define NUM_OF_PORTS 8                                      // Number of ports
 #define SIZE_OF_FFT 512
 
 
 typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
 typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
+typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
 
 typedef struct DAD_Interface_Struct_{
     // UART
@@ -80,6 +83,9 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct);
 
 // Read all elements from RSA UART buffer to peripherals
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct);
+
+// Find out which FFT to run
+//static HMIpage getPage(DAD_Interface_Struct* interfaceStruct);
 
 // Build packet from data in UART buffer
 static bool constructPacket(uint8_t* packet, DAD_UART_Struct* UARTptr);
