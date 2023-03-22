@@ -29,6 +29,7 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
     // HMI Interface init
     DAD_UART_Set_Config(HMI_BAUD, EUSCI_A2_BASE, &interfaceStruct->HMI_UART_struct);
     DAD_UART_Init(&interfaceStruct->HMI_UART_struct, HMI_BUFFER_SIZE);
+    interfaceStruct->page = HOME;
 
     // microSD Interface init, open log file
     interfaceStruct->currentPort = STOP;                        // Describes what file is currently being written to
@@ -110,7 +111,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     switch(PKstatus)
     {
         case DISCON:
-            sensorDisconnect(port, type, interfaceStruct);
+            HMIsensorDisconnect(port, type, interfaceStruct);
             break;
         case CON_D:
             handleData(port, type, packet, interfaceStruct);
@@ -137,34 +138,27 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
     }
 
     // Construct Packet
-    while(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){    // Check number of chars in buffer
-        //c = DAD_UART_GetChar(UARTptr);                          // get next char
+    uint8_t numCharsPacked;                                     // Keeps track of number of characters packed into packet
+    while (DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
+        numCharsPacked = 0;
 
         do
         {
+            numCharsPacked++;
             packet[0] = packet[1];
             packet[1] = packet[2];
             packet[2] = packet[3];
             packet[3] = c;
             c = DAD_UART_GetChar(UARTptr);
-        }while(c != 255);
-        if(c == 255)
+        }while(c != 255 && DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE);
+        if(c == 255 && numCharsPacked >= PACKET_SIZE)
         {
             return true;
         }
-        /*for(i = 1; i < PACKET_SIZE; i++){
-            DAD_UART_Peek(UARTptr, &c);
-            if(c != 255){
-                packet[i] = c;
-                DAD_UART_GetChar(UARTptr);
-            }
-            else
-                return false;
-        }*/
-        //return true;
+        c = DAD_UART_GetChar(UARTptr);                          // get next char
     }
 
-
+    // Not enough bytes to make a full packet
     // Flush out loose bytes
     while(DAD_UART_NumCharsInBuffer(UARTptr) > 0)
         DAD_UART_GetChar(UARTptr);
@@ -245,7 +239,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
             // Add packet to buffer,
             addToFreqBuffer(packet, interfaceStruct);
             // If second to last packet has been received, write to peripherals
-            if(packet[3]*2 == SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
+            if(packet[3]*2 <= SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
                 writeFreqToPeriphs(type, interfaceStruct);
             break;
     }
@@ -254,19 +248,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 // Handles packets of "connected, no data" type
 static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct){
     // TODO check sensor still responding
-
-    // Assert whether HMI expects FFT data
-            // HOME.f<sensornumber>.val=<0 or 1, depending on whether we want FFT>
-    DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.f");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort + 49);
-
-    (type == VIB || type == MIC) ? DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, ".val=1") :
-            DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, ".val=0");
-
-    // End of transmission
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+    HMIexpectFFT(type, interfaceStruct);
 }
 
 static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct)
@@ -279,7 +261,6 @@ static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* int
     char val[7] = "";
     sprintf(val, "%d", data);
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, val);
-
 
     // Message conditioning
     if(type == TEMP)
@@ -319,7 +300,7 @@ static void writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct*
 }
 
 
-static void sensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct)
+static void HMIsensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct)
 {
     // Write to HMI
     // Report sensor disconnected to HMI
@@ -370,10 +351,25 @@ static void sensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     interfaceStruct->currentPort = 255; // Record that current file is log.txt
 }
 
+// Checks whether type needs FFT, tells HMI whether to expect FFT
+static void HMIexpectFFT(packetType type, DAD_Interface_Struct* interfaceStruct){
+    // Assert whether HMI expects FFT data
+            // HOME.f<sensornumber>.val=<0 or 1, depending on whether we want FFT>
+    DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.f");
+    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort + 49);
+
+    (type == VIB || type == MIC) ? DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, ".val=1") :
+            DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, ".val=0");
+
+    // End of transmission
+    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+}
+
 static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
-    // If not allocated, calloc();
     uint8_t port = interfaceStruct->currentPort;
-    uint16_t index = packet[PACKET_SIZE - 1];               // Promote to 16 bit for multiplication
+    uint16_t index = packet[PACKET_SIZE - 1];                   // Promote to 16 bit for multiplication
 
     // TODO condition data
     // Add packet to buffer
@@ -386,18 +382,23 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* i
     // TODO deal with dropped frequency packets
         // Currently assumes no packet is dropped
         // Currently assumes last packet in order is the last received
-        // Currently assumes all data in buffer is up to data
+        // Currently assumes all data in buffer is up to date
     return false;
 }
 
 #ifdef USE_LUT
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
+    //HMIexpectFFT(type, interfaceStruct);
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
+    uint8_t port = interfaceStruct->currentPort;
+    #ifdef RECEIVE_HMI_FEEDBACK
+    if(interfaceStruct->currentPort < NUM_OF_PORTS && getPage(interfaceStruct) == port + 1){
+    #else
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
+    #endif
         // Write preamble to microSD
-        uint8_t port = interfaceStruct->currentPort;
         char microSDmsg[17];
         (type == VIB) ? sprintf(microSDmsg, "\np%d, Vib, ", port + 1):
                         sprintf(microSDmsg, "\np%d, Mic, ", port + 1);
@@ -429,6 +430,7 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
 
 #ifndef USE_LUT
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
+    HMIexpectFFT(packetType type, DAD_Interface_Struct* interfaceStruct)
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
@@ -516,8 +518,10 @@ static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct){
 }
 #endif
 
-//// Find out which FFT to run
-//static HMIpage getPage(DAD_Interface_Struct* interfaceStruct){
-//    // TODO
-//    while(interfaceStruct)
-//}
+// Find out what page user is on
+static HMIpage getPage(DAD_Interface_Struct* interfaceStruct){
+    while(DAD_UART_HasChar(&interfaceStruct->HMI_UART_struct)){
+        interfaceStruct->page = DAD_UART_GetChar(&interfaceStruct->HMI_UART_struct);
+    }
+    return interfaceStruct->page;
+}

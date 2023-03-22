@@ -28,25 +28,26 @@
 #define WRITE_TO_ONLY_ONE_FILE
 // #define FREQ_WRITE_TIME_TEST
 #define USE_LUT
-// #define WRITE_TO_MICRO_SD
+#define WRITE_TO_MICRO_SD
+// #define RECEIVE_HMI_FEEDBACK
 
 // UART Macros
-#define RSA_BAUD 9600
-#define RSA_BUFFER_SIZE 515
+#define RSA_BAUD 57600
+#define RSA_BUFFER_SIZE 750
 #define HMI_BAUD 57600
 #define HMI_BUFFER_SIZE 1024
 #define MAX_FILENAME_SIZE 12
 
 // Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#define FSM_TIMER_PERIOD 1000                               // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#define FSM_TIMER_PERIOD 500                               // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // Packet Macros
 #define STATUS_MASK 24
 #define PACKET_TYPE_MASK 7
 #define PORT_MASK 224
 #define PACKET_SIZE 4                                       // Excludes end char 255
-#define MESSAGE_LEN (sizeof(char)*(PACKET_SIZE) + 2)        // size of message
+#define MESSAGE_LEN 37
 #define NUM_OF_PORTS 8                                      // Number of ports
 #define SIZE_OF_FFT 512
 
@@ -67,6 +68,7 @@ typedef struct DAD_Interface_Struct_{
     // For writing to periphs
     uint8_t currentPort;                        // Describes what port is currently being written to. Useful for deciding whether we need to open a different file
     char fileName[MAX_FILENAME_SIZE + 1];       // File name
+    HMIpage page;
 
     // Buffer pointers for buffering sound/vibration data
         // Buffers are loaded up with data.
@@ -84,9 +86,6 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct);
 // Read all elements from RSA UART buffer to peripherals
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct);
 
-// Find out which FFT to run
-//static HMIpage getPage(DAD_Interface_Struct* interfaceStruct);
-
 // Build packet from data in UART buffer
 static bool constructPacket(uint8_t* packet, DAD_UART_Struct* UARTptr);
 
@@ -103,7 +102,10 @@ static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct
 static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Report to HMI that sensor has been disconnected
-static void sensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct);
+static void HMIsensorDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Checks whether type needs FFT, tells HMI whether to expect FFT
+static void HMIexpectFFT(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Write single packet of data to HMI
 static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
@@ -111,11 +113,14 @@ static void writeToHMI(uint16_t data, packetType type, DAD_Interface_Struct* int
 // Writes single packet of data to microSD
 static void writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
 
-
 // Add packet to frequency buffer
 static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct);
 
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Find out which FFT to run
+static HMIpage getPage(DAD_Interface_Struct* interfaceStruct);
+
 
 #ifdef DEBUG
 static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct);
