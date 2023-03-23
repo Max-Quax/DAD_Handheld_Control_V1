@@ -11,6 +11,8 @@
 // Interface includes
 #include "HAL/DAD_UART.h"
 
+#define MIN_PACKETS_TO_PROCESS 15
+
 typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH} FSMstate;   // TODO add states as necessary
 
 // Initializes interfaces, timers necessary for FSM use

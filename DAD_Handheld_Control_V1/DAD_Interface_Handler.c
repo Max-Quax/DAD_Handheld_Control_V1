@@ -96,6 +96,9 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     #ifdef DEBUG
     // Debug - Log Packet
     logDebug(packet, interfaceStruct);
+    if(packet[3] >= 253 ){
+        int i = 0;
+    }
     #endif
 
     // Interpret packet
@@ -134,12 +137,12 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
     // Remove any "end packet" characters
     char c = 255;
     while(c == 255 && DAD_UART_HasChar(UARTptr)){
-        c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
+        c = DAD_UART_GetChar(UARTptr);                          // remove char at front of buffer
     }
 
     // Construct Packet
     uint8_t numCharsPacked;                                     // Keeps track of number of characters packed into packet
-    while (DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
+    while (DAD_UART_NumCharsInBuffer(UARTptr) >= PACKET_SIZE){  // Check number of chars in buffer
         numCharsPacked = 0;
 
         do
@@ -167,37 +170,37 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
 
 
 //    // Remove any "end packet" characters
-//        char c = 255;
-//        while(c == 255 && DAD_UART_HasChar(UARTptr)){
-//            c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
-//        }
+//    char c = 255;
+//    while(c == 255 && DAD_UART_HasChar(UARTptr)){
+//        c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
+//    }
 //
-//        #ifdef DEBUG
-//        if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
-//        #endif
+//    #ifdef DEBUG
+//    if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
+//    #endif
 //
-//        // Construct Packet
-//        if(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
-//            int i;
-//            packet[0] = c;                                      // Fencepost to keep from reading too far
-//            for(i = 1; i < PACKET_SIZE; i++){
-//                DAD_UART_Peek(UARTptr, &c);
-//                if(c != 255){
-//                    packet[i] = c;
-//                    DAD_UART_GetChar(UARTptr);
-//                }
-//                else
-//                    return false;
+//    // Construct Packet
+//    if(DAD_UART_NumCharsInBuffer(UARTptr) > PACKET_SIZE){   // Check number of chars in buffer
+//        int i;
+//        packet[0] = c;                                      // Fencepost to keep from reading too far
+//        for(i = 1; i < PACKET_SIZE; i++){
+//            DAD_UART_Peek(UARTptr, &c);
+//            if(c != 255){
+//                packet[i] = c;
+//                DAD_UART_GetChar(UARTptr);
 //            }
-//            return true;
+//            else
+//                return false;
 //        }
+//        return true;
+//    }
 //
 //
-//        // Flush out loose bytes
-//        while(DAD_UART_NumCharsInBuffer(UARTptr) > 0)
-//            DAD_UART_GetChar(UARTptr);
+//    // Flush out loose bytes
+//    while(DAD_UART_NumCharsInBuffer(UARTptr) > 0)
+//        DAD_UART_GetChar(UARTptr);
 //
-//        return false;
+//    return false;
 
 }
 
@@ -239,7 +242,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
             // Add packet to buffer,
             addToFreqBuffer(packet, interfaceStruct);
             // If second to last packet has been received, write to peripherals
-            if(packet[3]*2 <= SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
+            if(packet[1]*2 == SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
                 writeFreqToPeriphs(type, interfaceStruct);
             break;
     }
@@ -369,13 +372,13 @@ static void HMIexpectFFT(packetType type, DAD_Interface_Struct* interfaceStruct)
 
 static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
     uint8_t port = interfaceStruct->currentPort;
-    uint16_t index = packet[PACKET_SIZE - 1];                   // Promote to 16 bit for multiplication
+    uint16_t index = packet[1];                                 // Promote to 16 bit for multiplication
 
     // TODO condition data
     // Add packet to buffer
     if(index * 2 + 1 < SIZE_OF_FFT && port < NUM_OF_PORTS){
-        interfaceStruct->freqBuf[port][index*2] = packet[1];    // just unconditioned data for now
-        interfaceStruct->freqBuf[port][index*2+1] = packet[2];  // just unconditioned data for now
+        interfaceStruct->freqBuf[port][index*2] = packet[2];    // just unconditioned data for now
+        interfaceStruct->freqBuf[port][index*2+1] = packet[3];  // just unconditioned data for now
 
         return true;
     }
@@ -388,11 +391,11 @@ static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* i
 
 #ifdef USE_LUT
 static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
-    //HMIexpectFFT(type, interfaceStruct);
+    uint8_t port = interfaceStruct->currentPort;
+    HMIexpectFFT(type, interfaceStruct);
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
-    uint8_t port = interfaceStruct->currentPort;
     #ifdef RECEIVE_HMI_FEEDBACK
     if(interfaceStruct->currentPort < NUM_OF_PORTS && getPage(interfaceStruct) == port + 1){
     #else

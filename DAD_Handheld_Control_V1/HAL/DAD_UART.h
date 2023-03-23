@@ -90,11 +90,6 @@ size_t DAD_UART_NumCharsInBuffer(DAD_UART_Struct* UARTPtr);
     // Return value just below fractional part
 static uint8_t DAD_UART_Find_Second_Mod_Reg(float divisionFactor);
 
-// TODO At least 1 full message is ready
-// TODO test latency
-//bool DAD_UART_MsgReady(DAD_UART_Struct* UARTPtr);
-
-// TODO - CRC?
 // TODO - DMA?
 
 #endif /* DAD_UART_H_ */
