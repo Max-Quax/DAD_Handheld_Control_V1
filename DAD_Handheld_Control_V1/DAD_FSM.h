@@ -10,8 +10,14 @@
 
 // Interface includes
 #include "HAL/DAD_UART.h"
+#include "DAD_Interface_Handler.h"
 
-#define MIN_PACKETS_TO_PROCESS 15
+#ifdef PRIORITIZE_FFT
+#define MIN_PACKETS_TO_PROCESS 200
+#else
+#define MIN_PACKETS_TO_PROCESS 25
+#endif
+
 
 typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH} FSMstate;   // TODO add states as necessary
 

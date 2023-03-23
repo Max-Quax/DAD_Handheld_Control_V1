@@ -12,6 +12,11 @@ static DAD_Interface_Struct interfaceStruct;
 
 void DAD_FSM_control(FSMstate *state){
     // FSM
+    #ifdef WHAT_CAUSES_FSM_CHANGE
+    bool hasFinished;
+    int numInBuffer;
+    #endif
+
     switch (*state){
 
     case STARTUP:
@@ -27,8 +32,13 @@ void DAD_FSM_control(FSMstate *state){
             // when timer expires, start writing to HMI and microSD
         //(DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && MIN_READ_COUNT <
         // if(RSA_BUFFER_SIZE*.75 < DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
+
         if((DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct) >= MIN_PACKETS_TO_PROCESS)
                 || RSA_BUFFER_SIZE ==  DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
+            #ifdef WHAT_CAUSES_FSM_CHANGE
+            numInBuffer = DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct);
+            hasFinished = DAD_Timer_Has_Finished(FSM_TIMER_HANDLE);
+            #endif
             *state = HANDLE_PERIPH;
         }
 
@@ -49,6 +59,7 @@ void DAD_FSM_control(FSMstate *state){
         // Disable RSA UART interrupts, ignore all UART input until buffer empty
         DAD_UART_DisableInt(&interfaceStruct.RSA_UART_struct);
         DAD_UART_DisableInt(&interfaceStruct.HMI_UART_struct);
+        DAD_Timer_Stop(FSM_TIMER_HANDLE, &interfaceStruct.FSMtimerConfig);
 
         // Handle all data in the RSA rx buffer
         handleRSABuffer(&interfaceStruct);

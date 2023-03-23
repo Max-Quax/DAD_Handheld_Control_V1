@@ -24,12 +24,16 @@
 #include "HAL/DAD_microSD.h"
 
 // Configuration macros
-//#define DEBUG
+#define DEBUG
+// #define WHAT_CAUSES_FSM_CHANGE
+// #define REPORT_FAILURE
 #define WRITE_TO_ONLY_ONE_FILE
+#define HIGH_FREQUENCY_POLLING
 // #define FREQ_WRITE_TIME_TEST
 #define USE_LUT
 #define WRITE_TO_MICRO_SD
-// #define RECEIVE_HMI_FEEDBACK
+//#define RECEIVE_HMI_FEEDBACK
+// #define PRIORITIZE_FFT
 
 // UART Macros
 #define RSA_BAUD 57600
@@ -40,7 +44,11 @@
 
 // Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
+#ifdef HIGH_FREQUENCY_POLLING
+#define FSM_TIMER_PERIOD 50                                 // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#else
 #define FSM_TIMER_PERIOD 750                                // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#endif
 
 // Packet Macros
 #define STATUS_MASK 24

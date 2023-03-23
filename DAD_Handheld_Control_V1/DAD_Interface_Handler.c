@@ -62,6 +62,11 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
 }
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
+    #ifdef WRITE_TO_ONLY_ONE_FILE
+    strcpy(interfaceStruct->fileName, "log.txt");
+    DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
+    #endif
+
     // Read individual packets from buffer
     while(PACKET_SIZE < DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
         handlePacket(interfaceStruct);
@@ -74,6 +79,11 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     while(DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct) > 0){
         DAD_UART_GetChar(&interfaceStruct->RSA_UART_struct);
     }
+
+    #ifdef DEBUG
+    char* message = "EndBuf\n\n";
+    DAD_UART_Write_Str(&interfaceStruct->microSD_UART, message);
+    #endif
 }
 
 static void handlePacket(DAD_Interface_Struct* interfaceStruct)
@@ -81,6 +91,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     // Construct packet
     uint8_t packet[PACKET_SIZE + 1];
     if(!constructPacket(packet, &interfaceStruct->RSA_UART_struct)){                                // If construct packet fails
+        #ifdef REPORT_FAILURE
         // Go to log file
         strcpy(interfaceStruct->fileName, "log.txt");
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
@@ -88,7 +99,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 
         // Log error to microSD.
         DAD_microSD_Write("Error: Failed to construct packet\n", &interfaceStruct->microSD_UART);   // A packet, misread, could have been.
-
+        #endif
         return;
     }
 
@@ -163,10 +174,14 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
 
     // Not enough bytes to make a full packet
     // Flush out loose bytes
-    while(DAD_UART_NumCharsInBuffer(UARTptr) > 0)
-        DAD_UART_GetChar(UARTptr);
-
+//    while(DAD_UART_NumCharsInBuffer(UARTptr) > 0)
+//        DAD_UART_GetChar(UARTptr);
+//
     return false;
+
+
+
+
 
 
 //    // Remove any "end packet" characters
