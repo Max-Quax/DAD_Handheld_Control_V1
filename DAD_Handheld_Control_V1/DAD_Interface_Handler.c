@@ -375,6 +375,19 @@ static void HMIexpectFFT(packetType type, DAD_Interface_Struct* interfaceStruct)
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+
+    if(type == VIB || type == MIC){
+        // Tell HMI to write Freq
+        DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.s");
+        DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort + 49);
+        //Update text on home screen
+        (type == VIB) ? DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "Val.txt=\"VIB\"") :
+                DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "Val.txt=\"MIC\"");
+        // End of transmission
+        DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+    }
 }
 
 static bool addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
