@@ -9,14 +9,6 @@
     // TODO HMI talk back to MSP
     // TODO Integrate BT
 
-// ISSUES
-    // Processing incoming packets may be fucky
-        // Symptoms
-            // Sensor 1 does not update
-            // random sensors connect
-            // disconnection is fucky
-    // Blocking
-
 #include "DAD_Interface_Handler.h"
 #include <string.h>
 
