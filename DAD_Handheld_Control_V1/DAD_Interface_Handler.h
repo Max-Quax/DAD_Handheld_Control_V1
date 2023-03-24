@@ -24,7 +24,7 @@
 #include "HAL/DAD_microSD.h"
 
 // Configuration macros
-#define DEBUG
+#define LOG_INPUT
 // #define WHAT_CAUSES_FSM_CHANGE
 // #define REPORT_FAILURE
 #define WRITE_TO_ONLY_ONE_FILE
@@ -44,11 +44,13 @@
 
 // Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
+#define FFT_TIMER_HANDLE TIMER_A3_BASE
 #ifdef HIGH_FREQUENCY_POLLING
 #define FSM_TIMER_PERIOD 50                                 // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 #else
 #define FSM_TIMER_PERIOD 750                                // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 #endif
+#define FFT_TIMER_PERIOD 3000                               // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // Packet Macros
 #define STATUS_MASK 24
@@ -64,6 +66,8 @@ typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
 typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
 typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
 
+// Structure for encapsulating hardware interaction
+    // Intended to be implemented as a singleton
 typedef struct DAD_Interface_Struct_{
     // UART
     DAD_UART_Struct RSA_UART_struct;
@@ -72,6 +76,7 @@ typedef struct DAD_Interface_Struct_{
 
     // Timer Control
     Timer_A_UpModeConfig FSMtimerConfig;
+    Timer_A_UpModeConfig FFTupdateTimer;
 
     // For writing to periphs
     uint8_t currentPort;                        // Describes what port is currently being written to. Useful for deciding whether we need to open a different file
@@ -129,8 +134,7 @@ static void writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceS
 // Find out which FFT to run
 static HMIpage getPage(DAD_Interface_Struct* interfaceStruct);
 
-
-#ifdef DEBUG
+#ifdef LOG_INPUT
 static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct);
 #endif
 

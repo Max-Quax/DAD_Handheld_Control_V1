@@ -30,7 +30,11 @@ void initInterfaces(DAD_Interface_Struct* interfaceStruct){
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
 
     // Wakeup Timer Init
-    DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &(interfaceStruct->FSMtimerConfig));
+    DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &interfaceStruct->FSMtimerConfig);
+
+    // FFT Timer init
+    DAD_Timer_Initialize_ms(FFT_TIMER_PERIOD, FFT_TIMER_HANDLE, &interfaceStruct->FFTupdateTimer);
+    // TODO start timer
 
     // Init buffs with all zeros
     int i, j;
@@ -72,7 +76,7 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
         DAD_UART_GetChar(&interfaceStruct->RSA_UART_struct);
     }
 
-    #ifdef DEBUG
+    #ifdef LOG_INPUT
     char* message = "EndBuf\n\n";
     DAD_UART_Write_Str(&interfaceStruct->microSD_UART, message);
     #endif
@@ -96,7 +100,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     }
 
 
-    #ifdef DEBUG
+    #ifdef LOG_INPUT
     // Debug - Log Packet
     logDebug(packet, interfaceStruct);
     if(packet[3] >= 253 ){
@@ -182,7 +186,7 @@ static bool constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTpt
 //        c = DAD_UART_GetChar(UARTptr);                      // remove char at front of buffer
 //    }
 //
-//    #ifdef DEBUG
+//    #ifdef LOG_INPUT
 //    if(DAD_UART_NumCharsInBuffer(UARTptr) <= PACKET_SIZE);  // Check number of chars in buffer
 //    #endif
 //
@@ -520,7 +524,7 @@ static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct
     }
 }
 
-#ifdef DEBUG
+#ifdef LOG_INPUT
 // Write everything to log file
 static void logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct){
     // Open log file
@@ -547,4 +551,6 @@ static HMIpage getPage(DAD_Interface_Struct* interfaceStruct){
         interfaceStruct->page = DAD_UART_GetChar(&interfaceStruct->HMI_UART_struct);
     }
     return interfaceStruct->page;
+
+    // TODO handle commands
 }
