@@ -54,12 +54,14 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct, DAD
         // Handle all data in the RSA rx buffer
         handleRSABuffer(interfaceStruct, utilsStruct);
 
+        #ifdef RECEIVE_HMI_FEEDBACK
         // Using commands from HMI, talk back to RSA
         DAD_UART_EnableInt(&interfaceStruct->HMI_UART_struct);
         DAD_get_UI_Feedback(interfaceStruct, utilsStruct);                                  // Update command to utilsStruct
         DAD_UART_Write_Char(&interfaceStruct->RSA_UART_struct, utilsStruct->commandFromUI)  // Send command
+        #endif
 
-        // Finished writing to HMI/microSD, start listening again
+        // Finished handling inputs from peripherals, start listening again
         *state = RSA_READ;
         DAD_UART_EnableInt(&interfaceStruct->RSA_UART_struct);
 
