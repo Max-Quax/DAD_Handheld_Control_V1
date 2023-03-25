@@ -70,7 +70,7 @@ typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b10
 // Talkback declarations
 typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
 #define HMI_START_COMMAND   254
-#define HMI_STOP_COMMAND    254
+#define HMI_STOP_COMMAND    255
 
 // Structure for requesting FFT updates to UI.
 typedef struct FFTstruct_{
@@ -102,6 +102,7 @@ typedef struct DAD_utils_struct_{
     uint8_t currentPort;                        // Describes what port is currently being written to. Useful for deciding whether we need to open a different file
     char fileName[MAX_FILENAME_SIZE + 1];       // File name
     HMIpage page;
+    uint8_t commandFromUI;
 
     // FFT Buffering/Handling
     #ifdef THROTTLE_UI_OUTPUT
@@ -146,11 +147,11 @@ void DAD_writeFreqToUI(packetType type, DAD_Interface_Struct* interfaceStruct, D
 void DAD_logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 #endif
 
+#ifdef RECEIVE_HMI_FEEDBACK
 // Read feedback from UI. Useful for deciding what FFT to send and what commands to run
 HMIpage DAD_get_UI_Feedback(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
+#endif
 
-// TODO write commands to RSA
-// TODO read command from HMI
 // TODO read status from microSD
 
 #endif /* DAD_INTERFACE_HANDLER_H_ */

@@ -56,8 +56,8 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct, DAD
 
         // Using commands from HMI, talk back to RSA
         DAD_UART_EnableInt(&interfaceStruct->HMI_UART_struct);
-            // TODO get command
-            // TODO send command
+        DAD_get_UI_Feedback(interfaceStruct, utilsStruct);                                  // Update command to utilsStruct
+        DAD_UART_Write_Char(&interfaceStruct->RSA_UART_struct, utilsStruct->commandFromUI)  // Send command
 
         // Finished writing to HMI/microSD, start listening again
         *state = RSA_READ;
@@ -66,7 +66,6 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct, DAD
         // Restart timer
         DAD_Timer_Start(FSM_TIMER_HANDLE);
     break;
-
     }
 
     // TODO state for reading commands from HMI

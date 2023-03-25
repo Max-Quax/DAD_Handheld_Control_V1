@@ -17,9 +17,13 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct*
     DAD_UART_Set_Config(HMI_BAUD, EUSCI_A2_BASE, &interfaceStruct->HMI_UART_struct);
     DAD_UART_Init(&interfaceStruct->HMI_UART_struct, HMI_BUFFER_SIZE);
     utilsStruct->page = HOME;
+    utilsStruct->commandFromUI = HMI_START_COMMAND;
+    #ifndef RECEIVE_HMI_FEEDBACK
+    DAD_UART_DisableInt(&interfaceStruct->HMI_UART_struct);     // Disables HMI communication to Handheld mcu
+    #endif
 
     // microSD Interface init, open log file
-    utilsStruct->currentPort = STOP;                        // Describes what file is currently being written to
+    utilsStruct->currentPort = STOP;                            // Describes what file is currently being written to
     strcpy(utilsStruct->fileName, "log.txt");
     DAD_microSD_InitUART(&interfaceStruct->microSD_UART);
     DAD_microSD_openFile(utilsStruct->fileName, &interfaceStruct->microSD_UART);
@@ -46,8 +50,6 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct*
             utilsStruct->freqBuf[i][j] = 0;
     }
 
-    // Disables HMI communication to Handheld mcu
-    DAD_UART_DisableInt(&interfaceStruct->HMI_UART_struct);   // TODO remove this
 
     // Initialize Lookup tables
     DAD_Utils_initFreqLUT(&utilsStruct->lutStruct);
@@ -320,12 +322,19 @@ void DAD_logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct, DAD_ut
 }
 #endif
 
+#ifdef RECEIVE_HMI_FEEDBACK
 // Find out what page user is on
 HMIpage DAD_get_UI_Feedback(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct){
+    char c;
     while(DAD_UART_HasChar(&interfaceStruct->HMI_UART_struct)){
-        utilsStruct->page = DAD_UART_GetChar(&interfaceStruct->HMI_UART_struct);
+        c = DAD_UART_GetChar(&interfaceStruct->HMI_UART_struct);
+        utilsStruct->page = c;  // TODO step through to make sure this is converting right
+
+        // Save whether HMI wants MSP to send start/stop commands
+        if(c == HMI_START_COMMAND || c == HMI_STOP_COMMAND){
+            utilsStruct->commandFromUI = c;
+        }
     }
     return utilsStruct->page;
-
-    // TODO handle commands
 }
+#endif
