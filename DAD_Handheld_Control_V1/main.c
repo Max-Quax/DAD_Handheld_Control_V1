@@ -15,6 +15,8 @@
     // TODO average intensity, moving averages
     // TODO implement transmits to RSA
 
+// TEST
+
 int main(void)
 {
     /* Halting WDT  */
