@@ -22,13 +22,10 @@
 
 typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH} FSMstate;   // TODO add states as necessary
 
-// Initializes interfaces, timers necessary for FSM use
-void DAD_FSM_init();
-
 // Device control
-void DAD_FSM_control(FSMstate *state);
+void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
-// TODO ensure singleton
-// TODO low power shutdown
+// TODO quality of life: ensure singleton
+// TODO quality of life: low power shutdown
 
 #endif /* DAD_FSM_H_ */

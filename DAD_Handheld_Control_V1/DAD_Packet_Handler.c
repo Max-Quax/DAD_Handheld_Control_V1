@@ -7,15 +7,15 @@
 
 #include <DAD_Packet_Handler.h>
 
-void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
+void handleRSABuffer(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct){
     #ifdef WRITE_TO_ONLY_ONE_FILE
-    strcpy(interfaceStruct->fileName, "log.txt");
-    DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
+    strcpy(utilsStruct->fileName, "log.txt");
+    DAD_microSD_openFile(utilsStruct->fileName, &interfaceStruct->microSD_UART);
     #endif
 
     // Read individual packets from buffer
     while(PACKET_SIZE < DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
-        handlePacket(interfaceStruct);
+        handlePacket(interfaceStruct, utilsStruct);
 
         // TODO write moving average/average intensity
 
@@ -34,9 +34,9 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     if(DAD_Timer_Has_Finished(UI_FFT_UPDATE_TIMER_PERIOD)){
         int fftToRun;
         for(fftToRun = 0; fftToRun < NUM_OF_PORTS; fftToRun++){
-            if(interfaceStruct->freqStructs[fftToRun].requestedWriteToUI){
-                DAD_writeFreqToUI(interfaceStruct->freqStructs[fftToRun].type, interfaceStruct);
-                interfaceStruct->freqStructs[fftToRun].requestedWriteToUI = false;
+            if(utilsStruct->freqStructs[fftToRun].requestedWriteToUI){
+                DAD_writeFreqToUI(utilsStruct->freqStructs[fftToRun].type, interfaceStruct, utilsStruct);
+                utilsStruct->freqStructs[fftToRun].requestedWriteToUI = false;
             }
         }
         DAD_Timer_Restart(UI_FFT_UPDATE_TIMER_PERIOD, &interfaceStruct->UIFFTupdateTimer);
@@ -49,7 +49,7 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     #endif
 }
 
-static void handlePacket(DAD_Interface_Struct* interfaceStruct)
+static void handlePacket(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct)
 {
     // Construct packet
     uint8_t packet[PACKET_SIZE + 1];
@@ -69,7 +69,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 
     #ifdef LOG_INPUT
     // Debug - Log Packet
-    DAD_logDebug(packet, interfaceStruct);
+    DAD_logDebug(packet, interfaceStruct, utilsStruct);
     if(packet[3] >= 253 ){
         int i = 0;
     }
@@ -81,23 +81,23 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     uint8_t port = (packet[0] & PORT_MASK) >> 5;
 
     #ifdef WRITE_TO_ONLY_ONE_FILE
-    interfaceStruct->currentPort = port;
+    utilsStruct->currentPort = port;
     #endif
 
     // Deal with packet
     switch(PKstatus)
     {
         case DISCON:
-            handleDisconnect(port, type, interfaceStruct);
+            handleDisconnect(port, type, interfaceStruct, utilsStruct);
             break;
         case CON_D:
-            handleData(port, type, packet, interfaceStruct);
+            handleData(port, type, packet, interfaceStruct, utilsStruct);
             break;
         case CON_ND:
-            handle_CON_ND(type, interfaceStruct);
+            handle_CON_ND(type, interfaceStruct, utilsStruct);
             break;
         case MSG:
-            handleMessage(type, interfaceStruct);
+            handleMessage(type, interfaceStruct, utilsStruct);
             break;
         default:
             DAD_microSD_Write("bad packet\n", &interfaceStruct->microSD_UART);
@@ -106,12 +106,12 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 }
 
 
-static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct)
+static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct)
 {
     // Write to HMI
     // Report sensor disconnected to HMI
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.s");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort + 49);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, utilsStruct->currentPort + 49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "Val.txt=\"NONE\"");
     // End of transmission
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
@@ -121,7 +121,7 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     // Report Stop Sending FFT
         // HOME.f<sensornumber>.val=0
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.f");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort + 49);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, utilsStruct->currentPort + 49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, ".val=0");
     // End of transmission
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
@@ -150,11 +150,11 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     // Write to data file
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
     // Open the log file
-    strcpy(interfaceStruct->fileName, "log.txt");
-    DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
+    strcpy(utilsStruct->fileName, "log.txt");
+    DAD_microSD_openFile(utilsStruct->fileName, &interfaceStruct->microSD_UART);
     // Write to log
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
-    interfaceStruct->currentPort = 255; // Record that current file is log.txt
+    utilsStruct->currentPort = 255; // Record that current file is log.txt
 }
 
 
@@ -208,7 +208,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 
 #ifdef THROTTLE_UI_OUTPUT
 // Processes data packet, sends data to peripherals
-static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
+static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct){
 
     #ifndef WRITE_TO_ONLY_ONE_FILE                       // Disables writing to multiple files
     // Check that we are writing to the right file
@@ -232,28 +232,28 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
             // TODO condition data
             data = ((packet[1] << 8) + packet[2]) % 110;
             if(DAD_Timer_Has_Finished(UI_UPDATE_TIMER_HANDLE))
-                DAD_writeToUI(data, type, interfaceStruct);
-            DAD_writeToMicroSD(data, type, interfaceStruct);
+                DAD_writeToUI(data, type, interfaceStruct, utilsStruct);
+            DAD_writeToMicroSD(data, type, interfaceStruct, utilsStruct);
             break;
         case HUM:
             // TODO condition data
             data = ((packet[1] << 8) + packet[2]) % 110;
             if(DAD_Timer_Has_Finished(UI_UPDATE_TIMER_HANDLE))
-                DAD_writeToUI(data, type, interfaceStruct);
-            DAD_writeToMicroSD(data, type, interfaceStruct);
+                DAD_writeToUI(data, type, interfaceStruct, utilsStruct);
+            DAD_writeToMicroSD(data, type, interfaceStruct, utilsStruct);
             break;
         case VIB:
             // Fall through to mic. Same code
         case MIC:
             // Add packet to buffer,
-            DAD_addToFreqBuffer(packet, interfaceStruct);
+            DAD_addToFreqBuffer(packet, interfaceStruct, utilsStruct);
             // If second to last packet has been received, write to peripherals
             if(packet[1]*2 == SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
                 // Always write data to microSD
-                DAD_writeFreqToMicroSD(type, interfaceStruct);
+                DAD_writeFreqToMicroSD(type, interfaceStruct, utilsStruct);
                 // Request a write to UI. Granted at end of buffer handling if timer has expired
-                interfaceStruct->freqStructs[port].requestedWriteToUI = true;
-                interfaceStruct->freqStructs[port].type = type;
+                utilsStruct->freqStructs[port].requestedWriteToUI = true;
+                utilsStruct->freqStructs[port].type = type;
             break;
     }
 }
@@ -261,16 +261,16 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 
 
 // Handles packets of "connected, no data" type
-static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct){
+static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct){
     // TODO check sensor still responding
-    DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
+    DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct, utilsStruct);
 }
 
-static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
+static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct){
     // Open the microSD log file
-    strcpy(interfaceStruct->fileName, "log.txt");
-    DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
-    interfaceStruct->currentPort = 255;
+    strcpy(utilsStruct->fileName, "log.txt");
+    DAD_microSD_openFile(utilsStruct->fileName, &interfaceStruct->microSD_UART);
+    utilsStruct->currentPort = 255;
 
     // TODO timestamp
     // TODO write message to HMI

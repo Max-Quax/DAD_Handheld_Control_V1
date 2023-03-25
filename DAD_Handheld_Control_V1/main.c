@@ -15,19 +15,27 @@
     // TODO average intensity, moving averages
     // TODO implement transmits to RSA
 
-// TEST
+    // TODO HMI talk back to MSP
+    // TODO Integrate BT
+    // TODO clean up code
+        // unnecessary inferfaceStruct
+        // functions in the wrong files
 
 int main(void)
 {
     /* Halting WDT  */
     MAP_WDT_A_holdTimer();
 
-    // Application loop
+    // Declarations
     FSMstate state = STARTUP;
+    DAD_Interface_Struct interfaceStruct;
+    DAD_utils_struct utilsStruct;
+
+    // Application loop
     while(true){
-        DAD_FSM_control(&state);                                // Handle everything
-        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);    // Debug - check that it's not hung up
-        MAP_PCM_gotoLPM0();                                     // Go back to sleep until next interrupt
+        DAD_FSM_control(&state, &interfaceStruct, &utilsStruct);    // Handle everything
+        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);        // Indicator light - check that it's not hung up
+        MAP_PCM_gotoLPM0();                                         // Go back to sleep until next interrupt
 
     }
 }

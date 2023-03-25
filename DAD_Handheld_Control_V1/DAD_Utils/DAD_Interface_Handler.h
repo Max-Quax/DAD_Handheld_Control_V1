@@ -56,7 +56,9 @@
 #define UI_FFT_UPDATE_TIMER_HANDLE  TIMER_A1_BASE
 #define UI_FFT_UPDATE_TIMER_PERIOD  2500                    // Period in ms. Throttles just FSM on UI
 
-// Packet Macros
+// Packet declarations
+typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
+typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
 #define STATUS_MASK         24
 #define PACKET_TYPE_MASK    7
 #define PORT_MASK           224
@@ -65,17 +67,16 @@
 #define NUM_OF_PORTS        8                               // Number of ports
 #define SIZE_OF_FFT         512
 
-
-typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
-typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
+// Talkback declarations
 typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
+#define HMI_START_COMMAND   254
+#define HMI_STOP_COMMAND    254
 
 // Structure for requesting FFT updates to UI.
 typedef struct FFTstruct_{
     bool requestedWriteToUI;
     packetType type;
 } FFTstruct;
-
 
 // Structure for encapsulating hardware interaction
     // Intended to be implemented as a singleton
@@ -92,59 +93,61 @@ typedef struct DAD_Interface_Struct_{
     Timer_A_UpModeConfig UIFFTupdateTimer;      // Limit FFT update to slower than rest of UI
     bool fftUpdateRequested[NUM_OF_PORTS];
     #endif
+} DAD_Interface_Struct;
 
+// Structure for recording non-hardware interfaces
+    // UI feedback, FFT buffers and timing utils, LUTs for FFT writing
+typedef struct DAD_utils_struct_{
     // For writing to periphs
     uint8_t currentPort;                        // Describes what port is currently being written to. Useful for deciding whether we need to open a different file
     char fileName[MAX_FILENAME_SIZE + 1];       // File name
     HMIpage page;
 
+    // FFT Buffering/Handling
     #ifdef THROTTLE_UI_OUTPUT
-    FFTstruct freqStructs[NUM_OF_PORTS];
+    FFTstruct freqStructs[NUM_OF_PORTS];            // Struct for timing the sending of FFTs
     #endif
-    // Buffer pointers for buffering sound/vibration data
-        // Buffers are loaded up with data.
-        // Data from buffer is then sent all at once
-    uint8_t freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
-
+    uint8_t freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];    // Buffer pointers for buffering sound/vibration data
 
     // Lookup tables
-    DAD_utilsStruct utils;
+    DAD_LUT_Struct lutStruct;
 
-} DAD_Interface_Struct;
+}DAD_utils_struct;
 
 // Initializes UART, timers necessary
-void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct);
+void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
 // Build packet from data in UART buffer
 bool DAD_constructPacket(uint8_t* packet, DAD_UART_Struct* UARTptr);
 
 // Checks whether type needs FFT, tells HMI whether to expect FFT
-void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* interfaceStruct);
+void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
 // Write single packet of data to HMI
-void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
 // Writes single packet of data to microSD
-void DAD_writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+void DAD_writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
 // Add packet to frequency buffer
-bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct);
+bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
 // Write frequency data to UI and microSD
 void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Write frequency data to just microSD
-void DAD_writeFreqToMicroSD(packetType type, DAD_Interface_Struct* interfaceStruct);
+void DAD_writeFreqToMicroSD(packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
 // Write frequency data to just UI
-void DAD_writeFreqToUI(packetType type, DAD_Interface_Struct* interfaceStruct);
+void DAD_writeFreqToUI(packetType type, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
-// Find out which FFT to run
-HMIpage DAD_get_UI_Page(DAD_Interface_Struct* interfaceStruct);
-
+// Logs all packets to microSD
 #ifdef LOG_INPUT
-void DAD_logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct);
+void DAD_logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 #endif
+
+// Read feedback from UI. Useful for deciding what FFT to send and what commands to run
+HMIpage DAD_get_UI_Feedback(DAD_Interface_Struct* interfaceStruct, DAD_utils_struct* utilsStruct);
 
 // TODO write commands to RSA
 // TODO read command from HMI

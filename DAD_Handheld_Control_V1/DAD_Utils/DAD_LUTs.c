@@ -11,7 +11,7 @@
 // Initialize frequency Lookup Table
     // Lookup table connects char to str output
     // avoids having to go through sprintf every time
-void DAD_Utils_initFreqLUT(DAD_utilsStruct* utilsStruct){
+void DAD_Utils_initFreqLUT(DAD_LUT_Struct* utilsStruct){
     int i;
 //    // Generate end characters
 //    char endChars[3];
@@ -35,12 +35,12 @@ void DAD_Utils_initFreqLUT(DAD_utilsStruct* utilsStruct){
 }
 
 // Using given uint8_t, return corresponding string to write to microSD
-char* DAD_Utils_getMicroSDStr(uint8_t num, DAD_utilsStruct* utilsStruct){
+char* DAD_Utils_getMicroSDStr(uint8_t num, DAD_LUT_Struct* utilsStruct){
     return utilsStruct->microSDFreqLUT[num];
 }
 
 // Using given uint8_t, return corresponding string to write to HMI
-char* DAD_Utils_getHMIStr(uint8_t num, DAD_utilsStruct* utilsStruct){
+char* DAD_Utils_getHMIStr(uint8_t num, DAD_LUT_Struct* utilsStruct){
     return utilsStruct->HMIFreqLUT[num];
 }
 
