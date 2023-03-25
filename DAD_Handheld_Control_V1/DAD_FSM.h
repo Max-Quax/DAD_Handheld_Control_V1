@@ -9,8 +9,9 @@
 #define DAD_FSM_H_
 
 // Interface includes
-#include "HAL/DAD_UART.h"
-#include "DAD_Interface_Handler.h"
+#include <HAL/DAD_UART.h>
+#include <DAD_Utils/DAD_Interface_Handler.h>
+#include <DAD_Packet_Handler.h>
 
 #ifdef PRIORITIZE_FFT
 #define MIN_PACKETS_TO_PROCESS 200

@@ -6,7 +6,7 @@
  */
 
 
-#include <DAD_Utils.h>
+#include <DAD_Utils/DAD_LUTs.h>
 
 // Initialize frequency Lookup Table
     // Lookup table connects char to str output

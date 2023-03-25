@@ -38,7 +38,7 @@
 
 // Specific to UART HAL
 #include <ti/drivers/UART.h>            // Import the UART driver definitions
-#include <HAL/modifiedRingbuf.h>            // Import ring buffer
+#include <DAD_Utils/modifiedRingbuf.h>  // Import ring buffer
 
 typedef struct DAD_UART_Struct_{
     char* bufPtr;
