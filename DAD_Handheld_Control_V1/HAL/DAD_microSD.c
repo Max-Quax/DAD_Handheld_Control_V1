@@ -20,10 +20,13 @@ static void DAD_microSD_enterCMD(DAD_UART_Struct* uartStruct){
     while(!DAD_Timer_Has_Finished(TIMER_A2_BASE));
 }
 
-void DAD_microSD_InitUART(DAD_UART_Struct* uartStruct){
+bool DAD_microSD_InitUART(DAD_UART_Struct* uartStruct){
     // Initialize UART
     DAD_UART_Set_Config(MICRO_SD_BAUD_RATE, MICRO_SD_MODULE_INSTANCE, uartStruct);  // Config UART
-    DAD_UART_Init(uartStruct, 512);             // Init UART with 512-byte buffer
+    //if(!DAD_UART_Init(uartStruct, MICRO_SD_BUFF_SIZE));             // Init UART
+    if(DAD_UART_Init_NoBuf(uartStruct) == false)             // Init UART
+        while(1);
+    //return false;
     MAP_UART_disableInterrupt(uartStruct->moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
 
     DAD_microSD_enterCMD(uartStruct);
@@ -31,6 +34,7 @@ void DAD_microSD_InitUART(DAD_UART_Struct* uartStruct){
     // Initialize microSD reader
     DAD_UART_Write_Str(uartStruct, "init");
     DAD_UART_Write_Char(uartStruct, 13);        // Carriage return
+    return true;
 }
 
 bool DAD_microSD_openFile(char* fileName, DAD_UART_Struct* uartStruct){

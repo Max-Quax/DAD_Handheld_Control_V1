@@ -21,7 +21,7 @@ void DAD_FSM_control(FSMstate *state){
     case STARTUP:
         DAD_initInterfaces(&interfaceStruct);       // Initialize hardware interfaces necessary for FSM use
         *state = RSA_READ;
-        DAD_Timer_Start(FSM_TIMER_HANDLE);      // Start timer
+        DAD_Timer_Start(FSM_TIMER_HANDLE);          // Start timer
         break;
 
     case RSA_READ:
@@ -62,6 +62,9 @@ void DAD_FSM_control(FSMstate *state){
         DAD_UART_EnableInt(&interfaceStruct.HMI_UART_struct);
 
         // Restart timer
+        #ifdef DELAY_UART_TRANSITION
+        DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &interfaceStruct.FSMtimerConfig);
+        #endif
         DAD_Timer_Start(FSM_TIMER_HANDLE);
     break;
 

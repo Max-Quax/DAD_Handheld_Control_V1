@@ -13,19 +13,28 @@
 
 // Initializes UART, timers necessary
 void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
+    #ifndef PORT_2_2_AS_RSA
     // RSA Interface init
     DAD_UART_Set_Config(RSA_BAUD, EUSCI_A0_BASE, &(interfaceStruct->RSA_UART_struct));
-    DAD_UART_Init(&interfaceStruct->RSA_UART_struct, RSA_BUFFER_SIZE);
+    #else
+    DAD_UART_Set_Config(RSA_BAUD, EUSCI_A1_BASE, &(interfaceStruct->RSA_UART_struct));
+    #endif
+    if(!DAD_UART_Init(&interfaceStruct->RSA_UART_struct, RSA_BUFFER_SIZE))
+        while(1);
 
     // HMI Interface init
+    //#ifdef WRITE_TO_HMI
     DAD_UART_Set_Config(HMI_BAUD, EUSCI_A2_BASE, &interfaceStruct->HMI_UART_struct);
-    DAD_UART_Init(&interfaceStruct->HMI_UART_struct, HMI_BUFFER_SIZE);
-    interfaceStruct->page = HOME;
+    if(!DAD_UART_Init(&interfaceStruct->HMI_UART_struct, HMI_BUFFER_SIZE))
+        while(1);
+    //#endif
+    interfaceStruct->currentHMIPage = 0;
 
     // microSD Interface init, open log file
     interfaceStruct->currentPort = STOP;                        // Describes what file is currently being written to
     strcpy(interfaceStruct->fileName, "log.txt");
-    DAD_microSD_InitUART(&interfaceStruct->microSD_UART);
+    if(!DAD_microSD_InitUART(&interfaceStruct->microSD_UART))
+        while(1);
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
 
     // Wakeup Timer Init
@@ -49,9 +58,6 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
         for(j = 0; j < SIZE_OF_FFT; j++)
             interfaceStruct->freqBuf[i][j] = 0;
     }
-
-    // Disables HMI communication to Handheld mcu
-    DAD_UART_DisableInt(&interfaceStruct->HMI_UART_struct);   // TODO remove this
 
     // Initialize Lookup tables
     DAD_Utils_initFreqLUT(&interfaceStruct->utils);
@@ -98,6 +104,14 @@ bool DAD_constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTptr){
 
 void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct)
 {
+    MAP_UART_disableInterrupt(interfaceStruct->HMI_UART_struct.moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
+
+    #ifdef DELAY_UART_TRANSITION
+    DAD_delayRxTx(interfaceStruct);
+    DAD_handle_UI_Info(interfaceStruct);
+    #endif
+
+    //#ifdef WRITE_TO_HMI
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.s");
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort+49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "Val.txt=\"");
@@ -119,7 +133,8 @@ void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfa
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
-    return;
+    MAP_UART_enableInterrupt(interfaceStruct->HMI_UART_struct.moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
+    //#endif
 }
 
 void DAD_writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct){
@@ -148,6 +163,7 @@ void DAD_writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* in
 
 // Checks whether type needs FFT, tells HMI whether to expect FFT
 void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* interfaceStruct){
+    #ifdef WRITE_TO_HMI
     // Assert whether HMI expects FFT data
             // HOME.f<sensornumber>.val=<0 or 1, depending on whether we want FFT>
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.f");
@@ -174,6 +190,7 @@ void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* in
         DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
         DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
     }
+    #endif
 }
 
 bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
@@ -199,11 +216,17 @@ bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* inte
 void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
     uint8_t port = interfaceStruct->currentPort;
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
+
+    #ifdef DELAY_UART_TRANSITION
+    DAD_delayRxTx(interfaceStruct);
+    #endif
+
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
+
     #ifdef RECEIVE_HMI_FEEDBACK
-    if(interfaceStruct->currentPort < NUM_OF_PORTS && DAD_get_UI_Page(interfaceStruct) == port + 1){
+    if(interfaceStruct->currentPort < NUM_OF_PORTS && interfaceStruct->currentHMIPage == port + 1){
     #else
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
     #endif
@@ -218,11 +241,13 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
         for(i = 0; i < SIZE_OF_FFT-2; i++){
             data = interfaceStruct->freqBuf[port][i];
 
+            #ifdef WRITE_TO_HMI
             // Write to HMI
             DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, DAD_Utils_getHMIStr(data, &interfaceStruct->utils));
             DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
             DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
             DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+            #endif
 
             // Write to microSD
             DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->utils), &interfaceStruct->microSD_UART);
@@ -246,11 +271,7 @@ void DAD_writeFreqToMicroSD(packetType type, DAD_Interface_Struct* interfaceStru
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
-    #ifdef RECEIVE_HMI_FEEDBACK
-    if(interfaceStruct->currentPort < NUM_OF_PORTS && DAD_get_UI_Page(interfaceStruct) == port + 1){
-    #else
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
-    #endif
         // Write preamble to microSD
         char microSDmsg[17];
         (type == VIB) ? sprintf(microSDmsg, "\np%d, Vib, ", port + 1):
@@ -274,11 +295,17 @@ void DAD_writeFreqToMicroSD(packetType type, DAD_Interface_Struct* interfaceStru
 void DAD_writeFreqToUI(packetType type, DAD_Interface_Struct* interfaceStruct){
     uint8_t port = interfaceStruct->currentPort;
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
+
+    #ifdef DELAY_UART_TRANSITION
+    DAD_delayRxTx(interfaceStruct);
+    #endif
+
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
+
     #ifdef RECEIVE_HMI_FEEDBACK
-    if(interfaceStruct->currentPort < NUM_OF_PORTS && DAD_get_UI_Page(interfaceStruct) == port + 1){
+    if(interfaceStruct->currentPort < NUM_OF_PORTS && interfaceStruct->currentHMIPage == port + 1){
     #else
     if(interfaceStruct->currentPort < NUM_OF_PORTS){
     #endif
@@ -286,13 +313,17 @@ void DAD_writeFreqToUI(packetType type, DAD_Interface_Struct* interfaceStruct){
         uint16_t i;
         for(i = 0; i < SIZE_OF_FFT-2; i++){
             data = interfaceStruct->freqBuf[port][i];
+
+            #ifdef WRITE_TO_HMI
             // Write to HMI
             DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, DAD_Utils_getHMIStr(data, &interfaceStruct->utils));
             DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
             DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
             DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+            #endif
         }
     }
+
     #ifdef FREQ_WRITE_TIME_TEST
     float timeElapsed;
     timeElapsed = DAD_Timer_Stop(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
@@ -324,12 +355,46 @@ void DAD_logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct){
 }
 #endif
 
-// Find out what page user is on
-HMIpage DAD_get_UI_Page(DAD_Interface_Struct* interfaceStruct){
-    while(DAD_UART_HasChar(&interfaceStruct->HMI_UART_struct)){
-        interfaceStruct->page = DAD_UART_GetChar(&interfaceStruct->HMI_UART_struct);
-    }
-    return interfaceStruct->page;
 
-    // TODO handle commands
+//#ifdef RECEIVE_HMI_FEEDBACK
+// Find out what page user is on
+    // See packet documentation on https://docs.google.com/document/d/1P54G2JY74sc4IFnYdbVefBHl6PjV_QkEGLOPHS6Cfe4/edit
+void DAD_handle_UI_Info(DAD_Interface_Struct* interfaceStruct){
+    HMI_msgType msgType;
+    uint8_t UI_msg;
+
+    while(DAD_UART_HasChar(&interfaceStruct->HMI_UART_struct)){
+        UI_msg = DAD_UART_GetChar(&interfaceStruct->HMI_UART_struct);
+        msgType = (HMI_msgType)((HMI_MSG_TYPE_MASK & UI_msg) >> 6);
+        switch(msgType){
+        case HOUR:
+                // TODO
+            break;
+        case MIN:
+                // TODO
+            break;
+        case SEC:
+                // TODO
+            break;
+        case OTHER:
+            if(UI_msg == HMI_MSG_START_CMD || UI_msg == HMI_MSG_START_CMD){
+                // TODO send command
+            }
+            else{
+                interfaceStruct->currentHMIPage = HMI_MSG_DATA_MASK & UI_msg;
+            }
+            break;
+        };
+    }
+}
+//#endif
+
+// Function for delaying transition btwn rx and tx
+void DAD_delayRxTx(DAD_Interface_Struct* interfaceStruct){
+    #ifdef DELAY_UART_TRANSITION
+    // UART Rx to Tx switch timer
+    DAD_Timer_Initialize_us(UART_DELAY_US, UART_DELAY_HANDLE, &interfaceStruct->UART_Switch_Timer);
+    DAD_Timer_Start(UART_DELAY_HANDLE);    // Restart timer
+    while(!DAD_Timer_Has_Finished(UART_DELAY_HANDLE));                              // Block for 50ms
+    #endif
 }

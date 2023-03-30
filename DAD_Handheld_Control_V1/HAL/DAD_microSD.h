@@ -8,20 +8,35 @@
 #ifndef HAL_DAD_MICROSD_H_
 #define HAL_DAD_MICROSD_H_
 
+//Standard includes
+#include <stdlib.h>
+#include <stdbool.h>
+
 #include <string.h>
 #include <HAL/DAD_UART.h>
 #include <HAL/DAD_Timer.h>
 
-#define MICRO_SD_BAUD_RATE 57600
-#define MICRO_SD_MODULE_INSTANCE EUSCI_A1_BASE  // Module instance - module A0 for debug
+// Config macros
+#define PORT_2_2_AS_RSA
+
+#define MICRO_SD_TIMER_MODULE   TIMER_A2_BASE
 #define MICRO_SD_CMD_DELAY 50                   // Wait until command mode is entered
+#define MICRO_SD_BAUD_RATE      57600
+#define MICRO_SD_BUFF_SIZE      2
+
+#ifndef PORT_2_2_AS_RSA
+#define MICRO_SD_MODULE_INSTANCE EUSCI_A1_BASE  // Module instance - module A2 for debug
+#else
+#define MICRO_SD_MODULE_INSTANCE EUSCI_A3_BASE  // Module instance
+#endif
+
 
 // Enter command mode
 static void DAD_microSD_enterCMD(DAD_UART_Struct* uartStruct);
 
 // Configures and Initializes UART
     // Parameter - structure for using the UART HAL
-void DAD_microSD_InitUART(DAD_UART_Struct* uartStruct);
+bool DAD_microSD_InitUART(DAD_UART_Struct* uartStruct);
 
 // Opens file
     // Step into cmd mode, append to file

@@ -30,16 +30,18 @@
 #define WRITE_TO_ONLY_ONE_FILE
 // #define HIGH_FREQUENCY_POLLING
 // #define FREQ_WRITE_TIME_TEST
+//#define WRITE_TO_HMI
 #define WRITE_TO_MICRO_SD
-// #define RECEIVE_HMI_FEEDBACK
+//#define RECEIVE_HMI_FEEDBACK
 // #define PRIORITIZE_FFT
-#define THROTTLE_UI_OUTPUT          // Caps UI update rate. WARNING: MUTUALLY EXCLUSIVE WITH FREQ_WRITE_TIME_TEST
+// #define THROTTLE_UI_OUTPUT          // Caps UI update rate. WARNING: MUTUALLY EXCLUSIVE WITH FREQ_WRITE_TIME_TEST
+#define DELAY_UART_TRANSITION          // Ensure device is never tyransmitting and receiving on the same channel at any moment
 
 // UART Macros
 #define RSA_BAUD            57600
 #define RSA_BUFFER_SIZE     1500
 #define HMI_BAUD            57600
-#define HMI_BUFFER_SIZE     1024
+#define HMI_BUFFER_SIZE     10
 #define MAX_FILENAME_SIZE   12
 
 // FSM Timer Macros
@@ -48,6 +50,12 @@
 #define FSM_TIMER_PERIOD            50                       // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 #else
 #define FSM_TIMER_PERIOD            750                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#endif
+
+// UART Timer Macros
+#ifdef DELAY_UART_TRANSITION                                // Ensure device is never tyransmitting and receiving on the same channel at any moment
+#define UART_DELAY_HANDLE           FSM_TIMER_HANDLE        // Same as FSM timer, as they are never used at the same time
+#define UART_DELAY_US               1000
 #endif
 
 // UI Update Timer Macros
@@ -64,11 +72,16 @@
 #define MESSAGE_LEN         37
 #define NUM_OF_PORTS        8                               // Number of ports
 #define SIZE_OF_FFT         512
+#define HMI_MSG_TYPE_MASK   0b11000000                      // Masks for what type each message is
+#define HMI_MSG_DATA_MASK   0b00111111
+#define HMI_MSG_START_CMD   254
+#define HMI_MSG_STOP_CMD    255
 
 
 typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
 typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
-typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
+//typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
+typedef enum {HOUR = 0, MIN = 1, SEC = 3, OTHER = 4} HMI_msgType;
 
 // Structure for requesting FFT updates to UI.
 typedef struct FFTstruct_{
@@ -93,10 +106,15 @@ typedef struct DAD_Interface_Struct_{
     bool fftUpdateRequested[NUM_OF_PORTS];
     #endif
 
+    #ifdef DELAY_UART_TRANSITION                // Ensure device is never tyransmitting and receiving on the same channel at any moment
+    Timer_A_UpModeConfig UART_Switch_Timer;     // Same as FSM timer, as they are never used at the same time
+    #endif
+
+
     // For writing to periphs
     uint8_t currentPort;                        // Describes what port is currently being written to. Useful for deciding whether we need to open a different file
     char fileName[MAX_FILENAME_SIZE + 1];       // File name
-    HMIpage page;
+    uint8_t currentHMIPage;
 
     #ifdef THROTTLE_UI_OUTPUT
     FFTstruct freqStructs[NUM_OF_PORTS];
@@ -139,8 +157,13 @@ void DAD_writeFreqToMicroSD(packetType type, DAD_Interface_Struct* interfaceStru
 // Write frequency data to just UI
 void DAD_writeFreqToUI(packetType type, DAD_Interface_Struct* interfaceStruct);
 
+// Function for delaying transition btwn rx and tx
+void DAD_delayRxTx();
+
+//#ifdef RECEIVE_HMI_FEEDBACK
 // Find out which FFT to run
-HMIpage DAD_get_UI_Page(DAD_Interface_Struct* interfaceStruct);
+void DAD_handle_UI_Info(DAD_Interface_Struct* interfaceStruct);
+//#endif
 
 #ifdef LOG_INPUT
 void DAD_logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct);

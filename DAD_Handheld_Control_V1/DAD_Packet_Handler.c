@@ -16,9 +16,10 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     // Read individual packets from buffer
     while(PACKET_SIZE < DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
         handlePacket(interfaceStruct);
-
-        // TODO write moving average/average intensity
-
+        #ifdef RECEIVE_HMI_FEEDBACK
+        if(DAD_UART_HasChar(&interfaceStruct->HMI_UART_struct))
+            DAD_handle_UI_Info(interfaceStruct);
+        #endif
     }
 
     // Flush out remaining chars from read buffer.
@@ -71,7 +72,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     // Debug - Log Packet
     DAD_logDebug(packet, interfaceStruct);
     if(packet[3] >= 253 ){
-        int i = 0;
+        int i = 0;  //just something to put a breakpoint on
     }
     #endif
 
@@ -108,6 +109,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 
 static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct)
 {
+    #ifdef WRITE_TO_HMI
     // Write to HMI
     // Report sensor disconnected to HMI
     DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.s");
@@ -127,6 +129,7 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+    #endif
 
     // Write to microSD
     // Construct message
