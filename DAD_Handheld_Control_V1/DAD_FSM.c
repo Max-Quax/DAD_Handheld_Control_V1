@@ -34,6 +34,24 @@ void DAD_FSM_control(FSMstate *state){
 
         */
 
+        #ifdef GET_GPIO_FEEDBACK
+        if(!interfaceStruct.startStop){
+            *state = STOP_STATE;
+        }
+
+        // When timer expires, start writing to HMI and microSD
+        // or
+        // Wait for buffer to fill
+        else if((DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct) >= MIN_PACKETS_TO_PROCESS)
+                || RSA_BUFFER_SIZE ==  DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct)){
+            #ifdef WHAT_CAUSES_FSM_CHANGE
+            numInBuffer = DAD_UART_NumCharsInBuffer(&interfaceStruct.RSA_UART_struct);
+            hasFinished = DAD_Timer_Has_Finished(FSM_TIMER_HANDLE);
+            #endif
+            *state = HANDLE_PERIPH;
+        }
+
+        #else
         // When timer expires, start writing to HMI and microSD
         // or
         // Wait for buffer to fill
@@ -45,12 +63,12 @@ void DAD_FSM_control(FSMstate *state){
             #endif
             *state = HANDLE_PERIPH;
         }
-
+        #endif
         break;
     case HANDLE_PERIPH:
         // Disable RSA UART interrupts, ignore all UART input until buffer empty
         DAD_UART_DisableInt(&interfaceStruct.RSA_UART_struct);
-        DAD_UART_DisableInt(&interfaceStruct.HMI_UART_struct);
+        DAD_UART_DisableInt(&interfaceStruct.HMI_RX_UART_struct);
         DAD_Timer_Stop(FSM_TIMER_HANDLE, &interfaceStruct.FSMtimerConfig);
 
         // Handle all data in the RSA rx buffer
@@ -59,18 +77,19 @@ void DAD_FSM_control(FSMstate *state){
         // Finished writing to HMI/microSD, start listening again
         *state = RSA_READ;
         DAD_UART_EnableInt(&interfaceStruct.RSA_UART_struct);
-        DAD_UART_EnableInt(&interfaceStruct.HMI_UART_struct);
+        DAD_UART_EnableInt(&interfaceStruct.HMI_RX_UART_struct);
 
         // Restart timer
         #ifdef DELAY_UART_TRANSITION
         DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &interfaceStruct.FSMtimerConfig);
         #endif
         DAD_Timer_Start(FSM_TIMER_HANDLE);
-    break;
-
+        break;
+    case STOP_STATE:
+        // TODO test stop state;
+        handleStop(&interfaceStruct);
+        if(interfaceStruct.startStop){
+           *state = RSA_READ;
+        }
     }
-
-    // TODO state for reading commands from HMI
-    // TODO talk to RSA?
-
 }

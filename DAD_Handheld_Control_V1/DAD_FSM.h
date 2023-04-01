@@ -20,7 +20,7 @@
 #endif
 
 
-typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH} FSMstate;   // TODO add states as necessary
+typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH, STOP_STATE} FSMstate;   // TODO add states as necessary
 
 // Initializes interfaces, timers necessary for FSM use
 void DAD_FSM_init();

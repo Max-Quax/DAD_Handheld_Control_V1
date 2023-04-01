@@ -23,11 +23,22 @@
 #define FREQ_LUT_SIZE           512
 #define MICROSD_LUT_WORD_SIZE   7
 #define HMI_LUT_WORD_SIZE       25
-#define HMI_FFT_ID 10
+#define HMI_FFT_ID              10
+#define NUM_OF_PORTS            8
+#define SIZE_OF_FFT             512
 
 typedef struct DAD_utilsStruct_{
     char microSDFreqLUT[FREQ_LUT_SIZE][MICROSD_LUT_WORD_SIZE];
     char HMIFreqLUT[FREQ_LUT_SIZE][HMI_LUT_WORD_SIZE];
+
+    // FFT structs/buffers
+    #ifdef THROTTLE_UI_OUTPUT
+    FFTstruct freqStructs[NUM_OF_PORTS];
+    #endif
+    // Buffer pointers for buffering sound/vibration data
+        // Buffers are loaded up with data.
+        // Data from buffer is then sent all at once
+    uint8_t freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
 } DAD_utilsStruct;
 
 // Initialize frequency Lookup Table

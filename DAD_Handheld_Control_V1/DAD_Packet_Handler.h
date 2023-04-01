@@ -9,13 +9,6 @@
  *      All lower levels are geared towards interacting with our specific hardware
  *
  */
-
-// TODO timestamp
-// TODO throttle ui
-// TODO Avg and moving average
-// TODO talkback to RSA
-// TODO raise the alarm when sensor hasn't said anything in a while
-
 #ifndef DAD_PACKET_HANDLER_H_
 #define DAD_PACKET_HANDLER_H_
 
@@ -43,5 +36,8 @@ static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct
 
 // Handles packets of "message" type
 static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Handles incoming packets when stop is asserted
+void handleStop(DAD_Interface_Struct* interfaceStruct);
 
 #endif /* DAD_PACKET_HANDLER_H_ */

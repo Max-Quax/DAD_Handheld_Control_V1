@@ -8,6 +8,15 @@
 #include <DAD_Packet_Handler.h>
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
+    // Set GPIO flags for use in this run
+    DAD_handle_UI_Feedback(interfaceStruct);
+
+    #ifdef RECEIVE_HMI_FEEDBACK
+    if(DAD_UART_HasChar(&interfaceStruct->HMI_RX_UART_struct))
+        DAD_handle_UI_Feedback(interfaceStruct);
+    #endif
+
+    // Write everything to log
     #ifdef WRITE_TO_ONLY_ONE_FILE
     strcpy(interfaceStruct->fileName, "log.txt");
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
@@ -16,10 +25,6 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     // Read individual packets from buffer
     while(PACKET_SIZE < DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
         handlePacket(interfaceStruct);
-        #ifdef RECEIVE_HMI_FEEDBACK
-        if(DAD_UART_HasChar(&interfaceStruct->HMI_UART_struct))
-            DAD_handle_UI_Info(interfaceStruct);
-        #endif
     }
 
     // Flush out remaining chars from read buffer.
@@ -48,6 +53,9 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     char* message = "EndBuf\n\n";
     DAD_UART_Write_Str(&interfaceStruct->microSD_UART, message);
     #endif
+
+    // Set GPIO flags for state change
+    DAD_handle_UI_Feedback(interfaceStruct);
 }
 
 static void handlePacket(DAD_Interface_Struct* interfaceStruct)
@@ -103,7 +111,6 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
         default:
             DAD_microSD_Write("bad packet\n", &interfaceStruct->microSD_UART);
     }
-
 }
 
 
@@ -112,23 +119,23 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     #ifdef WRITE_TO_HMI
     // Write to HMI
     // Report sensor disconnected to HMI
-    DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.s");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort + 49);
-    DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "Val.txt=\"NONE\"");
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->currentPort + 49);
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"NONE\"");
     // End of transmission
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
 
     // Report Stop Sending FFT
         // HOME.f<sensornumber>.val=0
-    DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, "HOME.f");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, interfaceStruct->currentPort + 49);
-    DAD_UART_Write_Str(&interfaceStruct->HMI_UART_struct, ".val=0");
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.f");
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->currentPort + 49);
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, ".val=0");
     // End of transmission
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
-    DAD_UART_Write_Char(&interfaceStruct->HMI_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
     #endif
 
     // Write to microSD
@@ -293,4 +300,73 @@ static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct
             break;
     }
 }
+
+// Handles incoming packets when stop is asserted
+void handleStop(DAD_Interface_Struct* interfaceStruct){
+    #ifdef GET_GPIO_FEEDBACK
+
+    uint8_t packet[PACKET_SIZE + 1];
+    packetStatus PKstatus;
+    packetType type;
+    uint8_t port;
+
+    // Read individual packets from buffer
+    while(PACKET_SIZE < DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
+        // Construct packet
+        if(!DAD_constructPacket(packet, &interfaceStruct->RSA_UART_struct)){                                // If construct packet fails
+            #ifdef REPORT_FAILURE
+            // Go to log file
+            strcpy(interfaceStruct->fileName, "log.txt");
+            DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
+            interfaceStruct->currentPort = 255;
+
+            // Log error to microSD.
+            DAD_microSD_Write("Error: Failed to construct packet\n", &interfaceStruct->microSD_UART);   // A packet, misread, could have been.
+            #endif
+            return;
+        }
+        #ifdef LOG_INPUT
+        // Debug - Log Packet
+        DAD_logDebug(packet, interfaceStruct);
+        #endif
+
+        // Interpret packet
+        PKstatus = (packetStatus)((packet[0] & STATUS_MASK) >> 3);
+        type = (packetType)(packet[0] & PACKET_TYPE_MASK);
+        port = (packet[0] & PORT_MASK) >> 5;
+
+        #ifdef WRITE_TO_ONLY_ONE_FILE
+        interfaceStruct->currentPort = port;
+        #endif
+
+        // Deal with packet
+        switch(PKstatus)
+        {
+            case DISCON:
+                handleDisconnect(port, type, interfaceStruct);
+                break;
+            case CON_D:
+                // Throw out data.
+                break;
+            case CON_ND:
+                handle_CON_ND(type, interfaceStruct);
+                break;
+            case MSG:
+                handleMessage(type, interfaceStruct);
+                break;
+            default:
+                DAD_microSD_Write("bad packet\n", &interfaceStruct->microSD_UART);
+        }
+    }
+
+    // Flush out remaining chars from read buffer.
+    while(DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct) > 0){
+        DAD_UART_GetChar(&interfaceStruct->RSA_UART_struct);
+    }
+
+    // Update GPIO flags
+    DAD_handle_UI_Feedback(interfaceStruct);
+    #endif
+}
+
 

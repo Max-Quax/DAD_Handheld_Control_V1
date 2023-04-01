@@ -11,8 +11,15 @@
 #include <DAD_Utils/DAD_Interface_Handler.h>
 #include <DAD_FSM.h>
 
+// TODO timestamp
+// TODO throttle ui
+// TODO Avg and moving average
+// TODO talkback to RSA
+// TODO raise the alarm when sensor hasn't said anything in a while
+
+
     // TODO average intensity, moving averages
-    // TODO implement transmits to RSA
+    // TODO transmit time
 // TODO Issue du jour
     // Connecting HMI feedback causes freezing.
     // Symptoms
