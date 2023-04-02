@@ -1,4 +1,4 @@
-#include <DAD_Calc.h>
+#include <DAD_Utils/DAD_Calc.h>
 
 // Initializes struct's values
 void DAD_Calc_InitStruct(DAD_Calc_Struct* calcStruct){
