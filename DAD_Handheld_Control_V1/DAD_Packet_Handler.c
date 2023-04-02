@@ -11,11 +11,6 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     // Set GPIO flags for use in this run
     DAD_handle_UI_Feedback(interfaceStruct);
 
-    #ifdef RECEIVE_HMI_FEEDBACK
-    if(DAD_UART_HasChar(&interfaceStruct->HMI_RX_UART_struct))
-        DAD_handle_UI_Feedback(interfaceStruct);
-    #endif
-
     // Write everything to log
     #ifdef WRITE_TO_ONLY_ONE_FILE
     strcpy(interfaceStruct->fileName, "log.txt");
@@ -67,7 +62,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
         // Go to log file
         strcpy(interfaceStruct->fileName, "log.txt");
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
-        interfaceStruct->currentPort = 255;
+        interfaceStruct->sensorPortOrigin = 255;
 
         // Log error to microSD.
         DAD_microSD_Write("Error: Failed to construct packet\n", &interfaceStruct->microSD_UART);   // A packet, misread, could have been.
@@ -90,7 +85,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     uint8_t port = (packet[0] & PORT_MASK) >> 5;
 
     #ifdef WRITE_TO_ONLY_ONE_FILE
-    interfaceStruct->currentPort = port;
+    interfaceStruct->sensorPortOrigin = port;
     #endif
 
     // Deal with packet
@@ -120,7 +115,7 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     // Write to HMI
     // Report sensor disconnected to HMI
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->currentPort + 49);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"NONE\"");
     // End of transmission
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
@@ -130,7 +125,7 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     // Report Stop Sending FFT
         // HOME.f<sensornumber>.val=0
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.f");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->currentPort + 49);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, ".val=0");
     // End of transmission
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
@@ -164,7 +159,7 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
     // Write to log
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
-    interfaceStruct->currentPort = 255; // Record that current file is log.txt
+    interfaceStruct->sensorPortOrigin = 255; // Record that current file is log.txt
 }
 
 
@@ -174,10 +169,10 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 
     #ifndef WRITE_TO_ONLY_ONE_FILE                       // Disables writing to multiple files
     // Check that we are writing to the right file
-    if(interfaceStruct->currentPort != port ){           // Compare data type to the file that is currently being written to
+    if(interfaceStruct->sensorPortOrigin != port ){           // Compare data type to the file that is currently being written to
         // Set port
         sprintf(interfaceStruct->fileName, "port%d.csv", port+1);
-        interfaceStruct->currentPort = port;
+        interfaceStruct->sensorPortOrigin = port;
 
         // Open the correct file
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
@@ -222,10 +217,10 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 
     #ifndef WRITE_TO_ONLY_ONE_FILE                       // Disables writing to multiple files
     // Check that we are writing to the right file
-    if(interfaceStruct->currentPort != port ){           // Compare data type to the file that is currently being written to
+    if(interfaceStruct->sensorPortOrigin != port ){           // Compare data type to the file that is currently being written to
         // Set port
         sprintf(interfaceStruct->fileName, "port%d.csv", port+1);
-        interfaceStruct->currentPort = port;
+        interfaceStruct->sensorPortOrigin = port;
 
         // Open the correct file
         DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
@@ -280,7 +275,7 @@ static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct
     // Open the microSD log file
     strcpy(interfaceStruct->fileName, "log.txt");
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
-    interfaceStruct->currentPort = 255;
+    interfaceStruct->sensorPortOrigin = 255;
 
     // TODO timestamp
     // TODO write message to HMI
@@ -318,7 +313,7 @@ void handleStop(DAD_Interface_Struct* interfaceStruct){
             // Go to log file
             strcpy(interfaceStruct->fileName, "log.txt");
             DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
-            interfaceStruct->currentPort = 255;
+            interfaceStruct->sensorPortOrigin = 255;
 
             // Log error to microSD.
             DAD_microSD_Write("Error: Failed to construct packet\n", &interfaceStruct->microSD_UART);   // A packet, misread, could have been.
@@ -336,7 +331,7 @@ void handleStop(DAD_Interface_Struct* interfaceStruct){
         port = (packet[0] & PORT_MASK) >> 5;
 
         #ifdef WRITE_TO_ONLY_ONE_FILE
-        interfaceStruct->currentPort = port;
+        interfaceStruct->sensorPortOrigin = port;
         #endif
 
         // Deal with packet

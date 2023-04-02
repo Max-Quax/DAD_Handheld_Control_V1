@@ -26,25 +26,19 @@
 
 // Configuration macros
 #define LOG_INPUT
-// #define WHAT_CAUSES_FSM_CHANGE
 // #define REPORT_FAILURE
 #define WRITE_TO_ONLY_ONE_FILE
-// #define HIGH_FREQUENCY_POLLING
 // #define FREQ_WRITE_TIME_TEST
 #define WRITE_TO_HMI
 #define WRITE_TO_MICRO_SD
 #define GET_GPIO_FEEDBACK
-//#define RECEIVE_HMI_FEEDBACK
-// #define PRIORITIZE_FFT
-// #define THROTTLE_UI_OUTPUT          // Caps UI update rate. WARNING: MUTUALLY EXCLUSIVE WITH FREQ_WRITE_TIME_TEST
-// #define DELAY_UART_TRANSITION          // Ensure device is never tyransmitting and receiving on the same channel at any moment
-// TODO remove code for unused configs
+
 
 // UART Macros
 #define RSA_BAUD            57600
-#define RSA_BUFFER_SIZE     1700
+#define RSA_BUFFER_SIZE     1500
 #define HMI_BAUD            57600
-#define HMI_BUFFER_SIZE     10
+#define HMI_BUFFER_SIZE     1
 #define MAX_FILENAME_SIZE   12
 #ifndef PORT_2_2_AS_RSA
 #define RSA_RX_UART_HANDLE  EUSCI_A0_BASE
@@ -57,17 +51,7 @@
 
 // FSM Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#ifdef HIGH_FREQUENCY_POLLING
-#define FSM_TIMER_PERIOD            50                       // Period in ms. Triggers an interrupt to kick off the FSM every so often.
-#else
 #define FSM_TIMER_PERIOD            750                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
-#endif
-
-// UART Timer Macros
-#ifdef DELAY_UART_TRANSITION                                // Ensure device is never tyransmitting and receiving on the same channel at any moment
-#define UART_DELAY_HANDLE           FSM_TIMER_HANDLE        // Same as FSM timer, as they are never used at the same time
-#define UART_DELAY_US               1000
-#endif
 
 // UI Update Timer Macros
 #define UI_UPDATE_TIMER_HANDLE      TIMER_A3_BASE
@@ -122,8 +106,7 @@ typedef struct DAD_Interface_Struct_{
     #endif
 
     // For writing to periphs
-    // TODO replace currentport with gpio
-    uint8_t currentPort;                        // Describes what port is currently being written to. Useful for deciding whether we need to open a different file
+    uint8_t sensorPortOrigin;                   // Describes where the package is coming from
     char fileName[MAX_FILENAME_SIZE + 1];       // File name
 
     // HMI
@@ -156,15 +139,6 @@ bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* in
 
 // Write frequency data to UI and microSD
 void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct);
-
-// Write frequency data to just microSD
-void DAD_writeFreqToMicroSD(packetType type, DAD_Interface_Struct* interfaceStruct);
-
-// Write frequency data to just UI
-void DAD_writeFreqToUI(packetType type, DAD_Interface_Struct* interfaceStruct);
-
-// Function for delaying transition btwn rx and tx
-void DAD_delayRxTx();
 
 // Find out which FFT to run
 void DAD_handle_UI_Feedback(DAD_Interface_Struct* interfaceStruct);

@@ -53,9 +53,6 @@ void DAD_UART_Set_Config(uint16_t baudRate, uint32_t moduleInstance, DAD_UART_St
 // Initializes the uart module with the specified config information. Needs a buffer to put characters in.
 bool DAD_UART_Init(DAD_UART_Struct* UARTPtr, size_t bufferSize);
 
-// Initiialize UART with no buffer
-bool DAD_UART_Init_NoBuf(DAD_UART_Struct* UARTPtr);
-
 // TODO Stop UART
 void DAD_UART_Stop(DAD_UART_Struct* UARTPtr);
 

@@ -89,49 +89,6 @@ bool DAD_UART_Init(DAD_UART_Struct* UARTPtr, size_t bufferSize){
     return true;
 }
 
-// Start UART communication
-bool DAD_UART_Init_NoBuf(DAD_UART_Struct* UARTPtr){
-    // Init and enable UART module
-    if(!MAP_UART_initModule(UARTPtr->moduleInst, &UARTPtr->uartConfig))
-        return false;
-    MAP_UART_enableModule(UARTPtr->moduleInst);
-
-    // Init buffer
-    free(UARTPtr->bufPtr);
-    UARTPtr->bufPtr = NULL;
-
-    // Choose which interrupt, which pins to set
-    uint32_t interruptNum = INT_EUSCIA0;
-    switch(UARTPtr->moduleInst){
-    case EUSCI_A0_BASE:
-        MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P1,    // GPIO for A0 UART
-                  GPIO_PIN2 | GPIO_PIN3, GPIO_PRIMARY_MODULE_FUNCTION);
-        UART0_BuffPtr = &UARTPtr->UART_Buffer;                          // Set BuffPtr
-        break;
-    case EUSCI_A1_BASE:
-        MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P2,    // GPIO for A1 UART
-                              GPIO_PIN2 | GPIO_PIN3, GPIO_PRIMARY_MODULE_FUNCTION);
-        UART1_BuffPtr = &UARTPtr->UART_Buffer;                          // Set BuffPtr
-        break;
-    case EUSCI_A2_BASE:
-        MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P3,    // GPIO for A2 UART
-                          GPIO_PIN3 | GPIO_PIN2, GPIO_PRIMARY_MODULE_FUNCTION);
-        UART2_BuffPtr = &UARTPtr->UART_Buffer;                          // Set BuffPtr
-        break;
-    case EUSCI_A3_BASE:
-        MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P9,    // GPIO for A3 UART
-                      GPIO_PIN6 | GPIO_PIN7, GPIO_PRIMARY_MODULE_FUNCTION);
-        UART3_BuffPtr = &UARTPtr->UART_Buffer;                          // Set BuffPtr
-        break;
-    }
-
-    // Enable Interrupts
-    MAP_Interrupt_enableInterrupt(interruptNum);
-    MAP_Interrupt_enableMaster();
-    return true;
-}
-
-
 // Write single char
 void DAD_UART_Write_Char(DAD_UART_Struct* UARTPtr, char c){
     MAP_UART_transmitData(UARTPtr->moduleInst, c);
@@ -164,9 +121,9 @@ void DAD_UART_Stop(DAD_UART_Struct* UARTPtr){
             break;
         }
 
-    UART_disableInterrupt(UARTPtr->moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
-    Interrupt_disableInterrupt(interruptNum);
-    UART_disableModule(UARTPtr->moduleInst);
+    MAP_UART_disableInterrupt(UARTPtr->moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
+    MAP_Interrupt_disableInterrupt(interruptNum);
+    MAP_UART_disableModule(UARTPtr->moduleInst);
 //    MAP_UART_disableInterrupt(UARTPtr->moduleInst, 0xFF);    // Disables all interrupts on specific module
 }
 
@@ -229,45 +186,45 @@ static uint8_t DAD_UART_Find_Second_Mod_Reg(float divisionFactor){
 
 
 void EUSCIA0_IRQHandler(void){
-    uint32_t intStatus = UART_getEnabledInterruptStatus(EUSCI_A0_BASE);
+    uint32_t intStatus = MAP_UART_getEnabledInterruptStatus(EUSCI_A0_BASE);
 
     if(intStatus & EUSCI_A_UART_RECEIVE_INTERRUPT){
-        modifiedRingBuf_put(UART0_BuffPtr, UART_receiveData(EUSCI_A0_BASE)); // Put received data at end of buffer
+        modifiedRingBuf_put(UART0_BuffPtr, MAP_UART_receiveData(EUSCI_A0_BASE)); // Put received data at end of buffer
     }
 
     //Clear all interrupts lol
-    UART_clearInterruptFlag(EUSCI_A0_BASE, 0xFF);
+    MAP_UART_clearInterruptFlag(EUSCI_A0_BASE, 0xFF);
 }
 
 void EUSCIA1_IRQHandler(void){
-    uint32_t intStatus = UART_getEnabledInterruptStatus(EUSCI_A1_BASE);
+    uint32_t intStatus = MAP_UART_getEnabledInterruptStatus(EUSCI_A1_BASE);
 
     if(intStatus & EUSCI_A_UART_RECEIVE_INTERRUPT){
-        modifiedRingBuf_put(UART1_BuffPtr, UART_receiveData(EUSCI_A1_BASE)); // Put received data at end of buffer
+        modifiedRingBuf_put(UART1_BuffPtr, MAP_UART_receiveData(EUSCI_A1_BASE)); // Put received data at end of buffer
     }
 
     //Clear all interrupts lol
-    UART_clearInterruptFlag(EUSCI_A1_BASE, 0xFF);
+    MAP_UART_clearInterruptFlag(EUSCI_A1_BASE, 0xFF);
 }
 
 void EUSCIA2_IRQHandler(void){
-    uint32_t intStatus = UART_getEnabledInterruptStatus(EUSCI_A2_BASE);
+    uint32_t intStatus = MAP_UART_getEnabledInterruptStatus(EUSCI_A2_BASE);
 
     if(intStatus & EUSCI_A_UART_RECEIVE_INTERRUPT){
-        modifiedRingBuf_put(UART2_BuffPtr, UART_receiveData(EUSCI_A2_BASE)); // Put received data at end of buffer
+        modifiedRingBuf_put(UART2_BuffPtr, MAP_UART_receiveData(EUSCI_A2_BASE)); // Put received data at end of buffer
     }
 
     //Clear all interrupts lol
-    UART_clearInterruptFlag(EUSCI_A2_BASE, 0xFF);
+    MAP_UART_clearInterruptFlag(EUSCI_A2_BASE, 0xFF);
 }
 
 void EUSCIA3_IRQHandler(void){
-    uint32_t intStatus = UART_getEnabledInterruptStatus(EUSCI_A3_BASE);
+    uint32_t intStatus = MAP_UART_getEnabledInterruptStatus(EUSCI_A3_BASE);
 
     if(intStatus & EUSCI_A_UART_RECEIVE_INTERRUPT){
-        modifiedRingBuf_put(UART3_BuffPtr, UART_receiveData(EUSCI_A3_BASE)); // Put received data at end of buffer
+        modifiedRingBuf_put(UART3_BuffPtr, MAP_UART_receiveData(EUSCI_A3_BASE)); // Put received data at end of buffer
     }
 
     //Clear all interrupts lol
-    UART_clearInterruptFlag(EUSCI_A3_BASE, 0xFF);
+    MAP_UART_clearInterruptFlag(EUSCI_A3_BASE, 0xFF);
 }

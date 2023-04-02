@@ -11,34 +11,41 @@
 #include <DAD_Utils/DAD_Interface_Handler.h>
 #include <DAD_FSM.h>
 
-// TODO timestamp
-// TODO throttle ui
-// TODO Avg and moving average
-// TODO talkback to RSA
-// TODO raise the alarm when sensor hasn't said anything in a while
-
-
+// Requirements
+    // TODO Avg and moving average
     // TODO average intensity, moving averages
     // TODO transmit time
-// TODO Issue du jour
-    // Connecting HMI feedback causes freezing.
-    // Symptoms
-        // Works until HMI connected to rx
-        // Freezes once HMI tx connected to MSP rx
-            // Debug shows codes falls into loop in driver
-            // Issue with transmit?
-        // independent 2 channel communication works without current code configuration. unsure about simultaneous comm
+    // TODO condition data
+    // TODO get UART to MSP working
+        // Time
+        // configs
+// Non-requirement priority
+    // TODO timestamp
+    // TODO raise the alarm when sensor hasn't said anything in a while
+    // TODO FFT fast transfer
+    // TODO make page-specific FFT faster
 
+// Quality of life
+    // TODO ensure singleton
+    // TODO low power shutdown
+    // TODO throttle ui
+
+// Issues with HMI
+    // Sometimes starts up in stop mode
+    // When switching to different FFT, keeps data from old FFT
 
 int main(void)
 {
     /* Halting WDT  */
     MAP_WDT_A_holdTimer();
 
+    // Declare hardware interface struct
+    DAD_Interface_Struct interfaceStruct;
+
     // Application loop
     FSMstate state = STARTUP;
     while(true){
-        DAD_FSM_control(&state);                                // Handle everything
+        DAD_FSM_control(&state, &interfaceStruct);                                // Handle everything
         MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);    // Debug - check that it's not hung up
         MAP_PCM_gotoLPM0();                                     // Go back to sleep until next interrupt
 
