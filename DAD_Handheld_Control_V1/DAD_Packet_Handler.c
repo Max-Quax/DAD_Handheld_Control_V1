@@ -188,17 +188,18 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
         case TEMP:
             // TODO condition data
             data = ((packet[1] << 8) + packet[2]) % 110;
-            DAD_writeToUI(data, type, interfaceStruct);
-            DAD_writeToMicroSD(data, type, interfaceStruct);
+            DAD_writeSlowDataToUI(data, type, interfaceStruct);
+            DAD_writeMovingAvgToUI(data, type, interfaceStruct);
+            DAD_writeSlowDataToMicroSD(data, type, interfaceStruct);
             break;
         case HUM:
             // TODO condition data
             data = ((packet[1] << 8) + packet[2]) % 110;
-            DAD_writeToUI(data, type, interfaceStruct);
-            DAD_writeToMicroSD(data, type, interfaceStruct);
+            DAD_writeSlowDataToUI(data, type, interfaceStruct);
+            DAD_writeMovingAvgToUI(data, type, interfaceStruct);
+            DAD_writeSlowDataToMicroSD(data, type, interfaceStruct);
             break;
-        case VIB:
-            // Fall through to mic. Same code
+        case VIB:   // Fall through to mic. Same code
         case MIC:
             // Add packet to buffer,
             DAD_addToFreqBuffer(packet, interfaceStruct);

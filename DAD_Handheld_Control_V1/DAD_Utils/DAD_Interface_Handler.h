@@ -51,7 +51,7 @@
 
 // FSM Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#define FSM_TIMER_PERIOD            3000                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#define FSM_TIMER_PERIOD            750                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // UI Update Timer Macros
 #define UI_UPDATE_TIMER_HANDLE      TIMER_A3_BASE
@@ -126,20 +126,26 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct);
 // Build packet from data in UART buffer
 bool DAD_constructPacket(uint8_t* packet, DAD_UART_Struct* UARTptr);
 
-// Checks whether type needs FFT, tells HMI whether to expect FFT
-void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* interfaceStruct);
-
-// Write single packet of data to HMI
-void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+// Write single packet of Temp or HUM to HMI
+void DAD_writeSlowDataToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Writes single packet of data to microSD
-void DAD_writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+void DAD_writeSlowDataToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Write moving average for Freq or Temp
+void DAD_writeMovingAvgToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Add packet to frequency buffer
 bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE+1], DAD_Interface_Struct* interfaceStruct);
 
 // Write frequency data to UI and microSD
 void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Checks whether type needs FFT, tells HMI whether to expect FFT
+void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* interfaceStruct);
+
+// Display avg intensity of vibration type
+void DAD_displayAvgIntensity(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Find out which FFT to run
 void DAD_handle_UI_Feedback(DAD_Interface_Struct* interfaceStruct);

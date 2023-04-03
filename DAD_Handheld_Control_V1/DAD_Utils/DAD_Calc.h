@@ -35,7 +35,7 @@ void DAD_Calc_InitStruct(DAD_Calc_Struct* calcStruct);
 
 // Moving average
     // Takes newest reading, updates sensor's moving average
-float DAD_Calc_MovingAvg(uint8_t* packet, DAD_Calc_Struct* calcStruct);
+float DAD_Calc_MovingAvg(uint16_t data, packetType type, DAD_Calc_Struct* calcStruct);
 
 // Average intensity
     // Takes reading, updates sensor's average intensity

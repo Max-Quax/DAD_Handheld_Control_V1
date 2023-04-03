@@ -37,21 +37,9 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
     // Wakeup Timer Init
     DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &interfaceStruct->FSMtimerConfig);
 
-    #ifdef THROTTLE_UI_OUTPUT
-    // UI Update Timers init and start
-    DAD_Timer_Initialize_ms(UI_UPDATE_TIMER_PERIOD, UI_UPDATE_TIMER_HANDLE, &interfaceStruct->UIupdateTimer);
-    DAD_Timer_Start(UI_UPDATE_TIMER_HANDLE);
-    DAD_Timer_Initialize_ms(UI_FFT_UPDATE_TIMER_PERIOD, UI_FFT_UPDATE_TIMER_HANDLE, &interfaceStruct->UIFFTupdateTimer);
-    DAD_Timer_Start(UI_FFT_UPDATE_TIMER_HANDLE);
-    #endif
-
     // Init buffs with all zeros (memset was not cooperating. Skill issue?)
     int i, j;
     for(i = 0; i < NUM_OF_PORTS; i++){
-        #ifdef THROTTLE_UI_OUTPUT
-        interfaceStruct->freqStructs[i].requestedWriteToUI = false;
-        interfaceStruct->freqStructs[i].type = START;
-        #endif
         for(j = 0; j < SIZE_OF_FFT; j++)
             interfaceStruct->lutStruct.freqBuf[i][j] = 0;
     }
@@ -101,9 +89,8 @@ bool DAD_constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTptr){
 }
 
 
-void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct)
+void DAD_writeSlowDataToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct)
 {
-    #ifdef WRITE_TO_HMI
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin+49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"");
@@ -125,10 +112,9 @@ void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfa
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-    #endif
 }
 
-void DAD_writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct){
+void DAD_writeSlowDataToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct){
 #ifdef WRITE_TO_MICRO_SD
     // Construct message
     char message[MESSAGE_LEN];
@@ -150,43 +136,28 @@ void DAD_writeToMicroSD(uint16_t data, packetType type, DAD_Interface_Struct* in
 #endif
 }
 
+void DAD_writeMovingAvgToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct){
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin+49);
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Avg.txt=\"");
 
-// Checks whether type needs FFT, tells HMI whether to expect FFT
-void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* interfaceStruct){
-    #ifdef WRITE_TO_HMI
-    // Assert whether HMI expects FFT data
-            // HOME.f<sensornumber>.val=<0 or 1, depending on whether we want FFT>
-    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.f");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
+    // Write data to HMI
+    char val[7] = "";
+    sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->calcStruct[interfaceStruct->sensorPortOrigin]));
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
 
-    (type == VIB || type == MIC) ? DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, ".val=1") :
-            DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, ".val=0");
+    // Message conditioning
+    if(type == TEMP)
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 'F');
+    else if(type == HUM)
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '%');
+
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '\"');
 
     // End of transmission
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-
-    // Display "VIB" or "MIC" on the home screen
-    if(type == VIB || type == MIC){
-        // Tell HMI to write Freq
-        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
-        //Update text on home screen
-        #ifdef AVG_INTENSITY
-        char avgIntensityMsg[20];
-        sprintf(avgIntensityMsg, "Val.txt=\"%ddB\"", (int)DAD_Calc_AvgIntensity(interfaceStruct->lutStruct.freqBuf[interfaceStruct->sensorPortOrigin], type));
-        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, avgIntensityMsg);
-        #else
-        (type == VIB) ? DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"VIB\"") :
-                DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"MIC\"");
-        #endif
-        // End of transmission
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-    }
-    #endif
 }
 
 bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
@@ -212,6 +183,7 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
     uint8_t port = interfaceStruct->sensorPortOrigin;
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
 
+
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
@@ -224,35 +196,21 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
 
         // Write preamble to HMI
-        #ifdef WRITE_TO_HMI_FAST_FFTS
         char hmiMsg[15];
         sprintf(hmiMsg, "addt %d,0,%d", HMI_FFT_ID, SIZE_OF_FFT-1);
         DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, hmiMsg);
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-        #endif
 
         uint8_t data;
         uint16_t i;
 
-        #ifdef WRITE_TO_HMI_FAST_FFTS
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 0);
-        #endif
+
         for(i = 0; i < SIZE_OF_FFT-2; i++){
             data = interfaceStruct->lutStruct.freqBuf[port][i];
-
-            #ifdef WRITE_TO_HMI
-            #ifdef WRITE_TO_HMI_FAST_FFTS
             DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, data);
-            #else
-            // Write to HMI
-            DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, DAD_Utils_getHMIStr(data, &interfaceStruct->lutStruct));
-            DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-            DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-            DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
-            #endif
-            #endif
 
             // Write to microSD
             DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->lutStruct), &interfaceStruct->microSD_UART);
@@ -282,6 +240,47 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
     if(true);
     #endif
 
+    DAD_displayAvgIntensity(type, interfaceStruct);
+}
+
+// Checks whether type needs FFT, tells HMI whether to expect FFT
+void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* interfaceStruct){
+    #ifdef WRITE_TO_HMI
+    // Assert whether HMI expects FFT data
+            // HOME.f<sensornumber>.val=<0 or 1, depending on whether we want FFT>
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.f");
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
+
+    (type == VIB || type == MIC) ? DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, ".val=1") :
+            DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, ".val=0");
+
+    // End of transmission
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    #endif
+}
+
+void DAD_displayAvgIntensity(packetType type, DAD_Interface_Struct* interfaceStruct){
+    // Display avg intensity
+    if(type == VIB || type == MIC){
+        // Tell HMI to write Freq
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
+        //Update text on home screen
+        #ifdef AVG_INTENSITY
+        char avgIntensityMsg[20];
+        sprintf(avgIntensityMsg, "Val.txt=\"%ddB\"", (int)DAD_Calc_AvgIntensity(interfaceStruct->lutStruct.freqBuf[interfaceStruct->sensorPortOrigin], type));
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, avgIntensityMsg);
+        #else
+        (type == VIB) ? DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"VIB\"") :
+                DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"MIC\"");
+        #endif
+        // End of transmission
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    }
 }
 
 #ifdef LOG_INPUT
