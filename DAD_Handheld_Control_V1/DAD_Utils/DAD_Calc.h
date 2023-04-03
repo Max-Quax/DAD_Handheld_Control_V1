@@ -15,7 +15,6 @@
 // Utils
 #include <math.h>
 #include <stdint.h>
-#include <DAD_Utils/modifiedLinkedList.h>
 
 #define MOVING_AVERAGE_N            128    // Calculate the moving averages based on the past N data packets
 #define FFT_SIZE                    512
@@ -40,13 +39,13 @@ float DAD_Calc_MovingAvg(uint8_t* packet, DAD_Calc_Struct* calcStruct);
 
 // Average intensity
     // Takes reading, updates sensor's average intensity
-float DAD_Calc_AvgIntensity(uint8_t* packet, packetType type);
+float DAD_Calc_AvgIntensity(uint8_t dataSet[FFT_SIZE-2], packetType type);
 
 // Clears moving average data. To be called on sensor disconnect
 void DAD_Calc_Clear_History(DAD_Calc_Struct* calcStruct);
 
 // Condition any packet
-float DAD_Calc_conditionPacket(uint8_t* packet, packetType type);
+float DAD_Calc_conditionPacket(uint8_t* packet);
 
 // TODO Condition Humidity data
 float DAD_Calc_ConditionHum(uint8_t* packet);

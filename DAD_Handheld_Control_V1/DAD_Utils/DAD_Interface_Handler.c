@@ -53,17 +53,19 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
         interfaceStruct->freqStructs[i].type = START;
         #endif
         for(j = 0; j < SIZE_OF_FFT; j++)
-            interfaceStruct->utils.freqBuf[i][j] = 0;
+            interfaceStruct->lutStruct.freqBuf[i][j] = 0;
     }
-
-    // Initialize Lookup tables
-    DAD_Utils_initFreqLUT(&interfaceStruct->utils);
 
     // Initialize timer for testing write time
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Initialize_ms(60000, TIMER_A1_BASE, &(interfaceStruct->FSMtimerConfig));
     DAD_Timer_Start(TIMER_A1_BASE);
     #endif
+
+    //Init Utils
+    DAD_Utils_initFreqLUT(&interfaceStruct->lutStruct);
+    for(i = 0; i < NUM_OF_PORTS; i++)
+        DAD_Calc_InitStruct(&interfaceStruct->calcStruct[i]);
 }
 
 // Constructs packet from data in UART HAL's ring buffer
@@ -101,11 +103,6 @@ bool DAD_constructPacket(uint8_t packet[PACKET_SIZE], DAD_UART_Struct* UARTptr){
 
 void DAD_writeToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct)
 {
-    #ifdef DELAY_UART_TRANSITION
-    DAD_delayRxTx(interfaceStruct);
-    DAD_handle_UI_Feedback(interfaceStruct);
-    #endif
-
     #ifdef WRITE_TO_HMI
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin+49);
@@ -176,8 +173,14 @@ void DAD_Tell_UI_Whether_To_Expect_FFT(packetType type, DAD_Interface_Struct* in
         DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
         //Update text on home screen
+        #ifdef AVG_INTENSITY
+        char avgIntensityMsg[20];
+        sprintf(avgIntensityMsg, "Val.txt=\"%ddB\"", (int)DAD_Calc_AvgIntensity(interfaceStruct->lutStruct.freqBuf[interfaceStruct->sensorPortOrigin], type));
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, avgIntensityMsg);
+        #else
         (type == VIB) ? DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"VIB\"") :
                 DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"MIC\"");
+        #endif
         // End of transmission
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
@@ -193,8 +196,8 @@ bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* inte
     // TODO condition data
     // Add packet to buffer
     if(index * 2 + 1 < SIZE_OF_FFT && port < NUM_OF_PORTS){
-        interfaceStruct->utils.freqBuf[port][index*2] = packet[2];    // just unconditioned data for now
-        interfaceStruct->utils.freqBuf[port][index*2+1] = packet[3];  // just unconditioned data for now
+        interfaceStruct->lutStruct.freqBuf[port][index*2] = packet[2];    // just unconditioned data for now
+        interfaceStruct->lutStruct.freqBuf[port][index*2+1] = packet[3];  // just unconditioned data for now
 
         return true;
     }
@@ -220,21 +223,39 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
                         sprintf(microSDmsg, "\np%d, Mic, ", port + 1);
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
 
+        // Write preamble to HMI
+        #ifdef WRITE_TO_HMI_FAST_FFTS
+        char hmiMsg[15];
+        sprintf(hmiMsg, "addt %d,0,%d", HMI_FFT_ID, SIZE_OF_FFT-1);
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, hmiMsg);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+        #endif
+
         uint8_t data;
         uint16_t i;
+
+        #ifdef WRITE_TO_HMI_FAST_FFTS
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 0);
+        #endif
         for(i = 0; i < SIZE_OF_FFT-2; i++){
-            data = interfaceStruct->utils.freqBuf[port][i];
+            data = interfaceStruct->lutStruct.freqBuf[port][i];
 
             #ifdef WRITE_TO_HMI
+            #ifdef WRITE_TO_HMI_FAST_FFTS
+            DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, data);
+            #else
             // Write to HMI
-            DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, DAD_Utils_getHMIStr(data, &interfaceStruct->utils));
+            DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, DAD_Utils_getHMIStr(data, &interfaceStruct->lutStruct));
             DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
             DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
             DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
             #endif
+            #endif
 
             // Write to microSD
-            DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->utils), &interfaceStruct->microSD_UART);
+            DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->lutStruct), &interfaceStruct->microSD_UART);
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
@@ -249,8 +270,8 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
         uint8_t data;
         uint16_t i;
         for(i = 0; i < SIZE_OF_FFT-2; i++){
-            data = interfaceStruct->utils.freqBuf[port][i];
-            DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->utils), &interfaceStruct->microSD_UART);
+            data = interfaceStruct->lutStruct.freqBuf[port][i];
+            DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->lutStruct), &interfaceStruct->microSD_UART);
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
@@ -260,6 +281,7 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
     timeElapsed = DAD_Timer_Stop(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     if(true);
     #endif
+
 }
 
 #ifdef LOG_INPUT

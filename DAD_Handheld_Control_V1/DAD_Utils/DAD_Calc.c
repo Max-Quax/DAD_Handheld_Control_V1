@@ -11,7 +11,7 @@ void DAD_Calc_InitStruct(DAD_Calc_Struct* calcStruct){
 float DAD_Calc_MovingAvg(uint8_t* packet, DAD_Calc_Struct* calcStruct){
     // Check packet type
     packetType type = (packetType)(packet[0] & PACKET_TYPE_MASK);
-    float data = conditionPacket(packet);
+    float data = DAD_Calc_conditionPacket(packet);
 
     if(type != calcStruct->type || calcStruct->numSamplesCollected == 0){
         calcStruct->numSamplesCollected = 1;
@@ -49,7 +49,7 @@ float DAD_Calc_AvgIntensity(uint8_t dataSet[FFT_SIZE-2], packetType type){
 
 
 // Condition any packet
-float DAD_Calc_conditionPacket(uint8_t* packet, packetType type){
+float DAD_Calc_conditionPacket(uint8_t* packet){
 //    switch(type){
 //    case()
 //    };

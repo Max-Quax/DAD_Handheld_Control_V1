@@ -17,8 +17,7 @@
 #include <stdint.h>
 
 // Macros includes
-// #include <DAD_Interface_Handler.h>
-
+#define WRITE_TO_HMI_FAST_FFTS
 
 #define FREQ_LUT_SIZE           512
 #define MICROSD_LUT_WORD_SIZE   7
@@ -27,29 +26,27 @@
 #define NUM_OF_PORTS            8
 #define SIZE_OF_FFT             512
 
-typedef struct DAD_utilsStruct_{
+typedef struct DAD_LUT_Struct_{
+    // Lookup tables
     char microSDFreqLUT[FREQ_LUT_SIZE][MICROSD_LUT_WORD_SIZE];
     char HMIFreqLUT[FREQ_LUT_SIZE][HMI_LUT_WORD_SIZE];
 
-    // FFT structs/buffers
-    #ifdef THROTTLE_UI_OUTPUT
-    FFTstruct freqStructs[NUM_OF_PORTS];
-    #endif
     // Buffer pointers for buffering sound/vibration data
         // Buffers are loaded up with data.
         // Data from buffer is then sent all at once
+    // TODO make freqBuf dynamically allocated
     uint8_t freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
-} DAD_utilsStruct;
+} DAD_LUT_Struct;
 
 // Initialize frequency Lookup Table
     // Lookup table connects char to str output
     // avoids having to go through sprintf every time
-void DAD_Utils_initFreqLUT(DAD_utilsStruct* utilsStruct);
+void DAD_Utils_initFreqLUT(DAD_LUT_Struct* utilsStruct);
 
 // Using given uint8_t, return corresponding string to write to microSD
-char* DAD_Utils_getMicroSDStr(uint8_t num, DAD_utilsStruct* utilsStruct);
+char* DAD_Utils_getMicroSDStr(uint8_t num, DAD_LUT_Struct* utilsStruct);
 
 // Using given uint8_t, return corresponding string to write to HMI
-char* DAD_Utils_getHMIStr(uint8_t num, DAD_utilsStruct* utilsStruct);
+char* DAD_Utils_getHMIStr(uint8_t num, DAD_LUT_Struct* utilsStruct);
 
 #endif /* TARGETCONFIGS_DAD_UTILS_H_ */

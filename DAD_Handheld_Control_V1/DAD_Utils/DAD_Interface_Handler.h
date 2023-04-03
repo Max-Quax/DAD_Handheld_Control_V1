@@ -18,6 +18,7 @@
 // Utils
 #include <string.h>
 #include <DAD_Utils/DAD_LUTs.h>
+#include <DAD_Utils/DAD_Calc.h>
 
 // HAL Includes
 #include <HAL/DAD_UART.h>
@@ -32,12 +33,12 @@
 #define WRITE_TO_HMI
 #define WRITE_TO_MICRO_SD
 #define GET_GPIO_FEEDBACK
-
+#define AVG_INTENSITY
 
 // UART Macros
 #define RSA_BAUD            57600
-#define RSA_BUFFER_SIZE     1500
-#define HMI_BAUD            57600
+#define RSA_BUFFER_SIZE     1950
+#define HMI_BAUD            38400
 #define HMI_BUFFER_SIZE     1
 #define MAX_FILENAME_SIZE   12
 #ifndef PORT_2_2_AS_RSA
@@ -48,10 +49,9 @@
 #define HMI_TX_UART_HANDLE  EUSCI_A2_BASE
 #define HMI_RX_UART_HANDLE  EUSCI_A3_BASE
 
-
 // FSM Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#define FSM_TIMER_PERIOD            750                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#define FSM_TIMER_PERIOD            3000                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // UI Update Timer Macros
 #define UI_UPDATE_TIMER_HANDLE      TIMER_A3_BASE
@@ -74,7 +74,7 @@
 
 
 typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
-typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
+//typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
 //typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
 typedef enum {HOUR = 0, MIN = 1, SEC = 3, OTHER = 4} HMI_msgType;
 
@@ -85,7 +85,7 @@ typedef struct FFTstruct_{
 } FFTstruct;
 
 
-// Structure for encapsulating hardware interaction
+// Structure for encapsulating hardware/utility interaction
     // Intended to be implemented as a singleton
 typedef struct DAD_Interface_Struct_{
     // UART
@@ -114,8 +114,9 @@ typedef struct DAD_Interface_Struct_{
     uint8_t         currentHMIPage;
     bool            startStop;                  // True when start
 
-    // Lookup tables
-    DAD_utilsStruct utils;
+    // Utils
+    DAD_Calc_Struct calcStruct[NUM_OF_PORTS];
+    DAD_LUT_Struct  lutStruct;
 
 } DAD_Interface_Struct;
 
