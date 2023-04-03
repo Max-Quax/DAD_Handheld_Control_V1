@@ -77,6 +77,7 @@ typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
 //typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
 //typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
 typedef enum {HOUR = 0, MIN = 1, SEC = 3, OTHER = 4} HMI_msgType;
+typedef enum {RED = 0b1111100000000000, BLUE = 0b0000000000011111, BLACK = 0b0000000000000000} HMI_color;
 
 // Structure for requesting FFT updates to UI.
 typedef struct FFTstruct_{
@@ -149,6 +150,9 @@ void DAD_displayAvgIntensity(packetType type, DAD_Interface_Struct* interfaceStr
 
 // Find out which FFT to run
 void DAD_handle_UI_Feedback(DAD_Interface_Struct* interfaceStruct);
+
+// Write Commands to UI (error messages, etc)
+void DAD_writeCMDToUI(char* msg, HMI_color color, DAD_Interface_Struct* interfaceStruct);
 
 #ifdef LOG_INPUT
 void DAD_logDebug(uint8_t* packet, DAD_Interface_Struct* interfaceStruct);

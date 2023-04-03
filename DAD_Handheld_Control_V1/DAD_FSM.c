@@ -40,7 +40,7 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
         }
         break;
     case HANDLE_PERIPH:
-        // Disable RSA UART interrupts, ignore all UART input until buffer empty
+        // Disable RSA UART rx interrupts, ignore all UART input until buffer empty
         DAD_UART_DisableInt(&interfaceStruct->RSA_UART_struct);
         DAD_UART_DisableInt(&interfaceStruct->HMI_RX_UART_struct);
         DAD_Timer_Stop(FSM_TIMER_HANDLE, &interfaceStruct->FSMtimerConfig);

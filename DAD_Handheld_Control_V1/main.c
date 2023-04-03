@@ -12,23 +12,24 @@
 #include <DAD_FSM.h>
 
 // Requirements
-    // TODO Avg and moving average
-    // TODO average intensity, moving averages
     // TODO transmit time
     // TODO condition data
+    // TODO combination sensor
     // TODO get UART to MSP working
         // Time
         // configs
 // Non-requirement priority
     // TODO timestamp
     // TODO raise the alarm when sensor hasn't said anything in a while
-    // TODO FFT fast transfer
     // TODO make page-specific FFT faster
 
 // Quality of life
     // TODO ensure singleton
     // TODO low power shutdown
     // TODO throttle ui
+    // TODO commands
+    // TODO hot glue
+
 
 // Issues with HMI
     // Sometimes starts up in stop mode

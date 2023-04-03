@@ -309,3 +309,20 @@ void DAD_handle_UI_Feedback(DAD_Interface_Struct* interfaceStruct){
     interfaceStruct->currentHMIPage = DAD_GPIO_getPage(&interfaceStruct->gpioStruct);
     interfaceStruct->startStop = DAD_GPIO_getStartStop(&interfaceStruct->gpioStruct);
 }
+
+
+// Write a command to the UI
+void DAD_writeCMDToUI(char* msg, HMI_color color, DAD_Interface_Struct* interfaceStruct){
+    // Update message color
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.msg.pco=");
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, (uint8_t)(((uint16_t)color & 0xFF00) >> 8));
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, (uint8_t)(color & 0x00FF));
+
+    // Write message
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.msg.txt");
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, msg);
+    // End of transmission
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+}

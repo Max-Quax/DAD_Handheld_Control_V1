@@ -27,23 +27,6 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
         DAD_UART_GetChar(&interfaceStruct->RSA_UART_struct);
     }
 
-    // Handle UI output timers
-    #ifdef THROTTLE_UI_OUTPUT
-    if(DAD_Timer_Has_Finished(UI_UPDATE_TIMER_HANDLE))
-        DAD_Timer_Restart(UI_UPDATE_TIMER_HANDLE, &interfaceStruct->UIupdateTimer);
-    // If UI FFT output timer has expired, run all queued FFTs
-    if(DAD_Timer_Has_Finished(UI_FFT_UPDATE_TIMER_PERIOD)){
-        int fftToRun;
-        for(fftToRun = 0; fftToRun < NUM_OF_PORTS; fftToRun++){
-            if(interfaceStruct->freqStructs[fftToRun].requestedWriteToUI){
-                DAD_writeFreqToUI(interfaceStruct->freqStructs[fftToRun].type, interfaceStruct);
-                interfaceStruct->freqStructs[fftToRun].requestedWriteToUI = false;
-            }
-        }
-        DAD_Timer_Restart(UI_FFT_UPDATE_TIMER_PERIOD, &interfaceStruct->UIFFTupdateTimer);
-    }
-    #endif
-
     #ifdef LOG_INPUT
     char* message = "EndBuf\n\n";
     DAD_UART_Write_Str(&interfaceStruct->microSD_UART, message);
@@ -74,9 +57,6 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
     #ifdef LOG_INPUT
     // Debug - Log Packet
     DAD_logDebug(packet, interfaceStruct);
-    if(packet[3] >= 253 ){
-        int i = 0;  //just something to put a breakpoint on
-    }
     #endif
 
     // Interpret packet
@@ -211,61 +191,6 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 }
 #endif
 
-
-#ifdef THROTTLE_UI_OUTPUT
-// Processes data packet, sends data to peripherals
-static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
-
-    #ifndef WRITE_TO_ONLY_ONE_FILE                       // Disables writing to multiple files
-    // Check that we are writing to the right file
-    if(interfaceStruct->sensorPortOrigin != port ){           // Compare data type to the file that is currently being written to
-        // Set port
-        sprintf(interfaceStruct->fileName, "port%d.csv", port+1);
-        interfaceStruct->sensorPortOrigin = port;
-
-        // Open the correct file
-        DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
-    }
-    #endif
-
-
-    // Write data to periphs
-    switch(type)
-    {
-        uint16_t data;
-
-        case TEMP:
-            // TODO condition data
-            data = ((packet[1] << 8) + packet[2]) % 110;
-            if(DAD_Timer_Has_Finished(UI_UPDATE_TIMER_HANDLE))
-                DAD_writeToUI(data, type, interfaceStruct);
-            DAD_writeToMicroSD(data, type, interfaceStruct);
-            break;
-        case HUM:
-            // TODO condition data
-            data = ((packet[1] << 8) + packet[2]) % 110;
-            if(DAD_Timer_Has_Finished(UI_UPDATE_TIMER_HANDLE))
-                DAD_writeToUI(data, type, interfaceStruct);
-            DAD_writeToMicroSD(data, type, interfaceStruct);
-            break;
-        case VIB:
-            // Fall through to mic. Same code
-        case MIC:
-            // Add packet to buffer,
-            DAD_addToFreqBuffer(packet, interfaceStruct);
-            // If second to last packet has been received, write to peripherals
-            if(packet[1]*2 == SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
-                // Always write data to microSD
-                DAD_writeFreqToMicroSD(type, interfaceStruct);
-                // Request a write to UI. Granted at end of buffer handling if timer has expired
-                interfaceStruct->freqStructs[port].requestedWriteToUI = true;
-                interfaceStruct->freqStructs[port].type = type;
-            break;
-    }
-}
-#endif
-
-
 // Handles packets of "connected, no data" type
 static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct){
     // TODO check sensor still responding
@@ -279,22 +204,30 @@ static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct
     interfaceStruct->sensorPortOrigin = 255;
 
     // TODO timestamp
-    // TODO write message to HMI
+    // TODO test
+    char message[50];
+    HMI_color color;
     switch(type){
         case LOWBAT:
-            DAD_microSD_Write("RSA Low Battery detected\n", &interfaceStruct->microSD_UART);
+            sprintf(message, "RSA Low Battery detected");
+            color = RED;
             break;
         case ERR:
-            DAD_microSD_Write("Error: RSA Error reported\n", &interfaceStruct->microSD_UART);
-            // TODO expand on this?
+            sprintf(message, "Error: RSA Error reported");
+            color = RED;
             break;
         case STOP:
-            DAD_microSD_Write("Data collection halted\n", &interfaceStruct->microSD_UART);
+            sprintf(message, "Data collection halted");
+            color = BLUE;
             break;
         case START:
-            DAD_microSD_Write("Data collection started\n", &interfaceStruct->microSD_UART);
+            sprintf(message, "Data collection started");
+            color = BLUE;
             break;
     }
+    DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
+    DAD_microSD_Write("\n", &interfaceStruct->microSD_UART);
+    DAD_writeCMDToUI(message, color, interfaceStruct);
 }
 
 // Handles incoming packets when stop is asserted
