@@ -53,12 +53,6 @@
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
 #define FSM_TIMER_PERIOD            750                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
-// UI Update Timer Macros
-#define UI_UPDATE_TIMER_HANDLE      TIMER_A3_BASE
-#define UI_UPDATE_TIMER_PERIOD      500                     // Period in ms. Throttles everything on UI except FSM
-#define UI_FFT_UPDATE_TIMER_HANDLE  TIMER_A1_BASE
-#define UI_FFT_UPDATE_TIMER_PERIOD  2500                    // Period in ms. Throttles just FSM on UI
-
 // Packet Macros
 #define STATUS_MASK         24
 #define PACKET_TYPE_MASK    7

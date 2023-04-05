@@ -25,6 +25,9 @@
 #ifndef DAD_TIMER_H_
 #define DAD_TIMER_H_
 
+// Config defines
+#define SET_TIMER_3_AS_SW_TIMER
+
 // DriverLib Includes
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
 
@@ -54,8 +57,6 @@ double DAD_Timer_Stop(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig);
 // Return current time
     // Returns time (in us or ms depending on how timer was initialized)
 double DAD_Timer_Get_Time(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig);
-
-void DAD_Timer_Restart(uint32_t timerBase, Timer_A_UpModeConfig *timerConfig);
 
 static void DAD_Timer_Set_Interrupt(uint32_t timerBase);
 
