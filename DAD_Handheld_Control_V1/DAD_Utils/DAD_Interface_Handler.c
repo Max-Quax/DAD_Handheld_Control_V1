@@ -93,19 +93,28 @@ void DAD_writeSlowDataToUI(uint16_t data, packetType type, DAD_Interface_Struct*
 {
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin+49);
-    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"");
-
-    // Write data to HMI
-    char val[7] = "";
-    sprintf(val, "%d", data);
-    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
 
     // Message conditioning
-    if(type == TEMP)
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 'F');
-    else if(type == HUM)
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '%');
+    if(type == TEMP){
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"");
 
+        // Write data to HMI
+        char val[7] = "";
+        sprintf(val, "%d", data);
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
+
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 'F');
+    }
+    else if(type == HUM){
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val2.txt=\"");
+
+        // Write data to HMI
+        char val[7] = "";
+        sprintf(val, "%d", data);
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
+
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '%');
+    }
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '\"');
 
     // End of transmission
@@ -139,19 +148,28 @@ void DAD_writeSlowDataToMicroSD(uint16_t data, packetType type, DAD_Interface_St
 void DAD_writeMovingAvgToUI(uint16_t data, packetType type, DAD_Interface_Struct* interfaceStruct){
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin+49);
-    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Avg.txt=\"");
 
-    // Write data to HMI
-    char val[7] = "";
-    sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->calcStruct[interfaceStruct->sensorPortOrigin]));
-    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
 
     // Message conditioning
-    if(type == TEMP)
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 'F');
-    else if(type == HUM)
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '%');
+    if(type == TEMP){
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Avg.txt=\"");
 
+        // Write data to HMI
+        char val[7] = "";
+        sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->calcStruct[interfaceStruct->sensorPortOrigin]));
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
+
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 'F');
+    }
+    else if(type == HUM){
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Avg2.txt=\"");
+
+        // Write data to HMI
+        char val[7] = "";
+        sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->calcStruct[interfaceStruct->sensorPortOrigin]));
+        DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '%');
+    }
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '\"');
 
     // End of transmission

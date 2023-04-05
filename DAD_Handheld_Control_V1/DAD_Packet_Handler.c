@@ -97,13 +97,20 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"NONE\"");
-    // End of transmission
+    // End of transmission (1st sensor)
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+    // Report second sensor disconnected to HMI
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
+    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val2.txt=\"\"");
+    // End of transmission (2st sensor)
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
 
     // Report Stop Sending FFT
-        // HOME.f<sensornumber>.val=0
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.f");
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, ".val=0");
@@ -165,13 +172,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
     {
         uint16_t data;
 
-        case TEMP:
-            // TODO condition data
-            data = ((packet[1] << 8) + packet[2]) % 110;
-            DAD_writeSlowDataToUI(data, type, interfaceStruct);
-            DAD_writeMovingAvgToUI(data, type, interfaceStruct);
-            DAD_writeSlowDataToMicroSD(data, type, interfaceStruct);
-            break;
+        case TEMP:  // Fall through to HUM
         case HUM:
             // TODO condition data
             data = ((packet[1] << 8) + packet[2]) % 110;

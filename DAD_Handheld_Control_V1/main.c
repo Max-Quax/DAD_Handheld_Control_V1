@@ -29,9 +29,6 @@
     // TODO low power shutdown
     // TODO hot glue
 
-
-//Test
-
 // Issues with HMI
     // Sometimes starts up in stop mode
     // When switching to different FFT, keeps data from old FFT
