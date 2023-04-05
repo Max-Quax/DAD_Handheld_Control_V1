@@ -184,7 +184,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
             // Add packet to buffer,
             DAD_addToFreqBuffer(packet, interfaceStruct);
             // If second to last packet has been received, write to peripherals
-            if(packet[1]*2 == SIZE_OF_FFT - 4 && DAD_Timer_Has_Finished(UI_UPDATE_TIMER_HANDLE))              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
+            if(packet[1]*2 == SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
                 DAD_writeFreqToPeriphs(type, interfaceStruct);
             break;
     }

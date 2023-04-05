@@ -10,7 +10,7 @@
 
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
 #include <stdint.h>
-#include <DAD_Timer.h>
+#include <HAL/DAD_Timer.h>
 
 #ifdef SET_TIMER_3_AS_SW_TIMER
 

@@ -5,7 +5,7 @@
  *      Author: Maximilien Engel
  */
 
-#include <DAD_Timer.h>
+#include <HAL/DAD_Timer.h>
 
 // Timer Variables
 static volatile bool DAD_timerHasExpired0 = true;

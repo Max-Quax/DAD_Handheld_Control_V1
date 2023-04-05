@@ -5,8 +5,8 @@
  *      Author: Max
  */
 
-#include <DAD_Timer.h>
-#include <DAD_SW_Timer.h>
+#include <HAL/DAD_Timer.h>
+#include <HAL/DAD_SW_Timer.h>
 
 static Timer_A_UpModeConfig swTimerConfig;
 static volatile uint32_t tickCounter;
