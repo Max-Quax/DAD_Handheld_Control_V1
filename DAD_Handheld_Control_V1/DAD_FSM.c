@@ -38,6 +38,8 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
                 || RSA_BUFFER_SIZE ==  DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
             *state = HANDLE_PERIPH;
         }
+
+        //else if(interfaceStruct->lastConnectedTime_ms > )
         break;
     case HANDLE_PERIPH:
         // Disable RSA UART rx interrupts, ignore all UART input until buffer empty

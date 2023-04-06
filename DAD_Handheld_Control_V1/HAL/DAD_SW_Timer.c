@@ -19,8 +19,14 @@ void DAD_SW_Timer_initHardware(){
 }
 
 // Get ms since starting (max of 32 bits)
-int DAD_SW_Timer_getMS(){
-    return tickCounter * DAD_SW_TIMER_RESOLUTION_MS;
+bool DAD_SW_Timer_getMS(uint64_t* timeToReturn){
+    // Overflow detection
+    bool returnVal = true;
+    if(tickCounter * DAD_SW_TIMER_RESOLUTION_MS < *timeToReturn)
+        returnVal = false;
+
+    *timeToReturn = (tickCounter * DAD_SW_TIMER_RESOLUTION_MS);
+    return returnVal;
 }
 
 void TA3_0_IRQHandler(void)

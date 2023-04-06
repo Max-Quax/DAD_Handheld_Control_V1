@@ -10,9 +10,9 @@ void DAD_Calc_InitStruct(DAD_Calc_Struct* calcStruct){
     // Takes newest reading, updates sensor's moving average
 float DAD_Calc_MovingAvg(uint16_t data, packetType type, DAD_Calc_Struct* calcStruct){
     // Check packet type
-    //float data = DAD_Calc_conditionPacket(data, type);
+    // float data = DAD_Calc_conditionPacket(data, type);
 
-    if(type != calcStruct->type || calcStruct->numSamplesCollected == 0){
+    if(calcStruct->numSamplesCollected == 0){
         calcStruct->numSamplesCollected = 1;
         calcStruct->type = type;
         calcStruct->list[0]  = data;
@@ -40,7 +40,6 @@ float DAD_Calc_MovingAvg(uint16_t data, packetType type, DAD_Calc_Struct* calcSt
         sum += calcStruct->list[i];
     }
     return round((sum / MOVING_AVERAGE_N)*100.0)/100.0;   // return sum/N with decimals truncated
-
 }
 
 // Average Intensity

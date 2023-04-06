@@ -21,7 +21,7 @@
 void DAD_SW_Timer_initHardware();
 
 // Get ms since starting (max of 32 bits)
-int DAD_SW_Timer_getMS();
+bool DAD_SW_Timer_getMS(uint64_t* timeToReturn);
 
 #endif // SET_TIMER_3_AS_SW_TIMER
 #endif /* DAD_SW_TIMER_H_ */

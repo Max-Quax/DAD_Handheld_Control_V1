@@ -52,8 +52,13 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
 
     //Init Utils
     DAD_Utils_initFreqLUT(&interfaceStruct->lutStruct);
-    for(i = 0; i < NUM_OF_PORTS; i++)
-        DAD_Calc_InitStruct(&interfaceStruct->calcStruct[i]);
+    for(i = 0; i < NUM_OF_PORTS; i++){
+        DAD_Calc_InitStruct(&interfaceStruct->tempCalcStruct[i]);
+        DAD_Calc_InitStruct(&interfaceStruct->humCalcStruct[i]);
+    }
+    // Init software Timer
+    DAD_SW_Timer_initHardware();
+    DAD_SW_Timer_getMS(&interfaceStruct->lastConnectedTime_ms);
 }
 
 // Constructs packet from data in UART HAL's ring buffer
@@ -156,7 +161,7 @@ void DAD_writeMovingAvgToUI(uint16_t data, packetType type, DAD_Interface_Struct
 
         // Write data to HMI
         char val[7] = "";
-        sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->calcStruct[interfaceStruct->sensorPortOrigin]));
+        sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->tempCalcStruct[interfaceStruct->sensorPortOrigin]));
         DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
 
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 'F');
@@ -166,7 +171,7 @@ void DAD_writeMovingAvgToUI(uint16_t data, packetType type, DAD_Interface_Struct
 
         // Write data to HMI
         char val[7] = "";
-        sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->calcStruct[interfaceStruct->sensorPortOrigin]));
+        sprintf(val, "%g", DAD_Calc_MovingAvg(data, type, &interfaceStruct->humCalcStruct[interfaceStruct->sensorPortOrigin]));
         DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, val);
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, '%');
     }

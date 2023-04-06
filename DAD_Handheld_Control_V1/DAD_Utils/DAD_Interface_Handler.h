@@ -16,6 +16,7 @@
 #include <stdlib.h>
 
 // Utils
+#include <stdint.h>
 #include <string.h>
 #include <DAD_Utils/DAD_LUTs.h>
 #include <DAD_Utils/DAD_Calc.h>
@@ -24,6 +25,7 @@
 #include <HAL/DAD_UART.h>
 #include <HAL/DAD_microSD.h>
 #include <HAL/DAD_GPIO.h>
+#include <HAL/DAD_SW_Timer.h>
 
 // Configuration macros
 #define LOG_INPUT
@@ -110,8 +112,10 @@ typedef struct DAD_Interface_Struct_{
     bool            startStop;                  // True when start
 
     // Utils
-    DAD_Calc_Struct calcStruct[NUM_OF_PORTS];
+    DAD_Calc_Struct tempCalcStruct[NUM_OF_PORTS];
+    DAD_Calc_Struct humCalcStruct[NUM_OF_PORTS];
     DAD_LUT_Struct  lutStruct;
+    uint64_t lastConnectedTime_ms;
 
 } DAD_Interface_Struct;
 

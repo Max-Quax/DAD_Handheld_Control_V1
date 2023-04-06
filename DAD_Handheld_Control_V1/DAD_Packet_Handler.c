@@ -8,6 +8,8 @@
 #include <DAD_Packet_Handler.h>
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
+
+
     // Set GPIO flags for use in this run
     DAD_handle_UI_Feedback(interfaceStruct);
 
@@ -147,6 +149,8 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     // Write to log
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
     interfaceStruct->sensorPortOrigin = 255; // Record that current file is log.txt
+
+    // TODO reset calcstruct
 }
 
 
