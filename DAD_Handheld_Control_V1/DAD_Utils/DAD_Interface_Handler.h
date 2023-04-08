@@ -50,10 +50,11 @@
 #endif
 #define HMI_TX_UART_HANDLE  EUSCI_A2_BASE
 #define HMI_RX_UART_HANDLE  EUSCI_A3_BASE
+#define HMI_THROTTLE_PERIOD_MS  3000
 
 // FSM Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#define FSM_TIMER_PERIOD            750                     // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#define FSM_TIMER_PERIOD    1000                            // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // Packet Macros
 #define STATUS_MASK         24
@@ -112,8 +113,9 @@ typedef struct DAD_Interface_Struct_{
     bool            startStop;                  // True when start
 
     // Utils
-    DAD_Calc_Struct tempCalcStruct[NUM_OF_PORTS];
+    DAD_Calc_Struct tempCalcStruct[NUM_OF_PORTS];   // TODO organize this into a substruct
     DAD_Calc_Struct humCalcStruct[NUM_OF_PORTS];
+    uint64_t        timeOfLastFFTSent[NUM_OF_PORTS];
     DAD_LUT_Struct  lutStruct;
     uint64_t lastConnectedTime_ms;
 

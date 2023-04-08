@@ -34,9 +34,6 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
         while(1);
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
 
-    // Wakeup Timer Init
-    DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &interfaceStruct->FSMtimerConfig);
-
     // Init buffs with all zeros (memset was not cooperating. Skill issue?)
     int i, j;
     for(i = 0; i < NUM_OF_PORTS; i++){
@@ -50,15 +47,21 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
     DAD_Timer_Start(TIMER_A1_BASE);
     #endif
 
+
     //Init Utils
     DAD_Utils_initFreqLUT(&interfaceStruct->lutStruct);
     for(i = 0; i < NUM_OF_PORTS; i++){
         DAD_Calc_InitStruct(&interfaceStruct->tempCalcStruct[i]);
         DAD_Calc_InitStruct(&interfaceStruct->humCalcStruct[i]);
+        interfaceStruct->timeOfLastFFTSent[i] = 0;
     }
     // Init software Timer
     DAD_SW_Timer_initHardware();
     DAD_SW_Timer_getMS(&interfaceStruct->lastConnectedTime_ms);
+
+    // Wakeup Timer Init
+    DAD_Timer_Initialize_ms(FSM_TIMER_PERIOD, FSM_TIMER_HANDLE, &interfaceStruct->FSMtimerConfig);
+    DAD_Timer_Start(FSM_TIMER_HANDLE);          // Start timer
 }
 
 // Constructs packet from data in UART HAL's ring buffer
@@ -204,14 +207,20 @@ bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* inte
 
 void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
     uint8_t port = interfaceStruct->sensorPortOrigin;
+    uint64_t currentTime;
+    DAD_SW_Timer_getMS(&currentTime);
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
-
 
     #ifdef FREQ_WRITE_TIME_TEST
     DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
     #endif
 
-    if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS && DAD_GPIO_getPage(&interfaceStruct->gpioStruct) == port + 1){
+    if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS
+            && DAD_GPIO_getPage(&interfaceStruct->gpioStruct) == port + 1
+            && currentTime - interfaceStruct->timeOfLastFFTSent[port] > HMI_THROTTLE_PERIOD_MS){
+        // Record last time of fft sent
+        DAD_SW_Timer_getMS(&interfaceStruct->timeOfLastFFTSent[port]);
+
         // Write preamble to microSD
         char microSDmsg[17];
         (type == VIB) ? sprintf(microSDmsg, "\np%d, Vib, ", port + 1):

@@ -189,7 +189,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
             // Add packet to buffer,
             DAD_addToFreqBuffer(packet, interfaceStruct);
             // If second to last packet has been received, write to peripherals
-            if(packet[1]*2 == SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
+            if(packet[1]*2 <= SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
                 DAD_writeFreqToPeriphs(type, interfaceStruct);
             break;
     }
@@ -202,7 +202,7 @@ static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
 }
 
-static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
+void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
     // Open the microSD log file
     strcpy(interfaceStruct->fileName, "log.txt");
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
@@ -229,6 +229,9 @@ static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct
             sprintf(message, "Data collection started");
             color = BLUE;
             break;
+        default:
+            sprintf(message, "");
+            color = BLUE;
     }
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
     DAD_microSD_Write("\n", &interfaceStruct->microSD_UART);

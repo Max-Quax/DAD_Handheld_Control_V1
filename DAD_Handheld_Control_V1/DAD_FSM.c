@@ -6,27 +6,23 @@
  */
 
 #include <DAD_FSM.h>
+#include <DAD_Packet_Handler.h>
 
 void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
+    uint64_t oldTime;
+    oldTime = interfaceStruct->lastConnectedTime_ms;
+
     // FSM
     switch (*state){
 
     case STARTUP:
-        DAD_initInterfaces(interfaceStruct);       // Initialize hardware interfaces necessary for FSM use
+        DAD_initInterfaces(interfaceStruct);        // Initialize hardware interfaces necessary for FSM use
+        handleMessage(START, interfaceStruct);      // Write Start Message
         *state = RSA_READ;
-        DAD_Timer_Start(FSM_TIMER_HANDLE);          // Start timer
         break;
 
     case RSA_READ:
-
-        /*
-
-        This state should only put packets in write buffer.
-        Write buffer is currently just the UART's ring buffer.
-        Packets in write buffer shall be written in HANDLE_PERIPH state
-
-        */
-
+        // Check for stop input from user
         if(!interfaceStruct->startStop){
             *state = STOP_STATE;
         }
@@ -39,7 +35,11 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
             *state = HANDLE_PERIPH;
         }
 
-        //else if(interfaceStruct->lastConnectedTime_ms > )
+        // Check for RSA timeout
+        else if(DAD_SW_Timer_getMS(&interfaceStruct->lastConnectedTime_ms)
+                && interfaceStruct->lastConnectedTime_ms - oldTime > RSA_RX_TIMEOUT_PERIOD_MS){
+            *state = HANDLE_RSA_TIMEOUT;
+        }
         break;
     case HANDLE_PERIPH:
         // Disable RSA UART rx interrupts, ignore all UART input until buffer empty
@@ -55,13 +55,31 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
         DAD_UART_EnableInt(&interfaceStruct->RSA_UART_struct);
         DAD_UART_EnableInt(&interfaceStruct->HMI_RX_UART_struct);
 
-        // Restart timer
+        // Restart Control Timer
         DAD_Timer_Start(FSM_TIMER_HANDLE);
+
+        // Reset timeout timer
+        DAD_SW_Timer_getMS(&interfaceStruct->lastConnectedTime_ms);
         break;
     case STOP_STATE:
-        handleStop(interfaceStruct);
+        if(DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct) >= MIN_PACKETS_TO_PROCESS){
+            handleStop(interfaceStruct);
+            DAD_SW_Timer_getMS(&interfaceStruct->lastConnectedTime_ms);     // Reset timeout timer
+        }
+
         if(interfaceStruct->startStop){
            *state = RSA_READ;
+        }
+
+        // Restart control timer
+        DAD_Timer_Start(FSM_TIMER_HANDLE);
+        break;
+    case HANDLE_RSA_TIMEOUT:
+        handleMessage(ERR, interfaceStruct);
+
+        if(DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct) > MIN_PACKETS_TO_PROCESS){
+            handleMessage(START, interfaceStruct);
+            *state = RSA_READ;
         }
     }
 }

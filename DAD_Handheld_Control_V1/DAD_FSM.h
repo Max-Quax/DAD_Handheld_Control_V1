@@ -21,7 +21,7 @@
 
 #define RSA_RX_TIMEOUT_PERIOD_MS 30000
 
-typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH, STOP_STATE} FSMstate;   // TODO add states as necessary
+typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH, HANDLE_RSA_TIMEOUT, STOP_STATE} FSMstate;   // TODO add states as necessary
 
 // Device control
 void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct);

@@ -15,22 +15,19 @@
 // TODO get UART to MSP working
         // Time
         // configs
-    // TODO combination sensor
     // TODO condition data
-    // TODO transmit time
+    // TODO throttle HMI display
 
 // Non-requirement priority
     // TODO timestamp
-    // TODO raise the alarm when sensor hasn't said anything in a while
-    // TODO make page-specific FFT faster
 
 // Quality of life
     // TODO ensure singleton
     // TODO low power shutdown
     // TODO hot glue
+    // TODO raise the alarm when sensor hasn't said anything in a while
 
 // Issues with HMI
-    // Sometimes starts up in stop mode
     // When switching to different FFT, keeps data from old FFT
 
 int main(void)

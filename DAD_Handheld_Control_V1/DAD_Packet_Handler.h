@@ -35,7 +35,7 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Handles packets of "message" type
-static void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct);
+void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct);
 
 // Handles incoming packets when stop is asserted
 void handleStop(DAD_Interface_Struct* interfaceStruct);
