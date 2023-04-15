@@ -207,8 +207,6 @@ bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* inte
 
 void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
     uint8_t port = interfaceStruct->sensorPortOrigin;
-    uint64_t currentTime;
-    DAD_SW_Timer_getMS(&currentTime);
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
 
     #ifdef FREQ_WRITE_TIME_TEST
@@ -216,10 +214,7 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
     #endif
 
     if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS
-            && DAD_GPIO_getPage(&interfaceStruct->gpioStruct) == port + 1
-            && currentTime - interfaceStruct->timeOfLastFFTSent[port] > HMI_THROTTLE_PERIOD_MS){
-        // Record last time of fft sent
-        DAD_SW_Timer_getMS(&interfaceStruct->timeOfLastFFTSent[port]);
+            && DAD_GPIO_getPage(&interfaceStruct->gpioStruct) == port + 1){
 
         // Write preamble to microSD
         char microSDmsg[17];
@@ -248,6 +243,7 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
             DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->lutStruct), &interfaceStruct->microSD_UART);
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
+
     }
     // Don't write to HMI
     else if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS){
@@ -346,12 +342,15 @@ void DAD_handle_UI_Feedback(DAD_Interface_Struct* interfaceStruct){
 // Write a command to the UI
 void DAD_writeCMDToUI(char* msg, HMI_color color, DAD_Interface_Struct* interfaceStruct){
     // Update message color
-    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.msg.pco=");
-    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, (uint8_t)(((uint16_t)color & 0xFF00) >> 8));
-    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, (uint8_t)(color & 0x00FF));
+//    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.msg.pco=");
+//    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, (uint8_t)(((uint16_t)color & 0xFF00) >> 8));
+//    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, (uint8_t)(color & 0x00FF));
+//    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+//    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
+//    DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
 
     // Write message
-    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.msg.txt");
+    DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.msg.txt=");
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, msg);
     // End of transmission
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);

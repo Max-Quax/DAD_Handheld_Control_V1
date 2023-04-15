@@ -189,8 +189,15 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
             // Add packet to buffer,
             DAD_addToFreqBuffer(packet, interfaceStruct);
             // If second to last packet has been received, write to peripherals
-            if(packet[1]*2 <= SIZE_OF_FFT - 4)              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
+            uint64_t currentTime;
+            DAD_SW_Timer_getMS(&currentTime);
+
+            if(packet[1]*2 >= SIZE_OF_FFT - 8
+                    && currentTime - interfaceStruct->timeOfLastFFTSent[port] > HMI_THROTTLE_PERIOD_MS){              // Note - second to last packet bc "last packet" would require receiving a byte of 0xFF, which would result in an invalid packet
                 DAD_writeFreqToPeriphs(type, interfaceStruct);
+                // Record last time of fft sent
+                DAD_SW_Timer_getMS(&interfaceStruct->timeOfLastFFTSent[port]);
+            }
             break;
     }
 }
@@ -230,7 +237,7 @@ void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
             color = BLUE;
             break;
         default:
-            sprintf(message, "");
+            sprintf(message, "Message Line");
             color = BLUE;
     }
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);

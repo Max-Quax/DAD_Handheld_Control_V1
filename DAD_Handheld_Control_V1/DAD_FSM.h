@@ -19,7 +19,7 @@
 #define MIN_PACKETS_TO_PROCESS 25
 #endif
 
-#define RSA_RX_TIMEOUT_PERIOD_MS 30000
+#define RSA_RX_TIMEOUT_PERIOD_MS 10000
 
 typedef enum {STARTUP, RSA_READ, HANDLE_PERIPH, HANDLE_RSA_TIMEOUT, STOP_STATE} FSMstate;   // TODO add states as necessary
 

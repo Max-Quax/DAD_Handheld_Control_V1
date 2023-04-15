@@ -8,10 +8,9 @@
 #include <DAD_FSM.h>
 #include <DAD_Packet_Handler.h>
 
-void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
-    uint64_t oldTime;
-    oldTime = interfaceStruct->lastConnectedTime_ms;
+static uint64_t lastDataTransmission; // Record previous time of data
 
+void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
     // FSM
     switch (*state){
 
@@ -22,23 +21,25 @@ void DAD_FSM_control(FSMstate *state, DAD_Interface_Struct* interfaceStruct){
         break;
 
     case RSA_READ:
-        // Check for stop input from user
-        if(!interfaceStruct->startStop){
-            *state = STOP_STATE;
-        }
 
         // When timer expires, start writing to HMI and microSD
         // or
         // Wait for buffer to fill
-        else if((DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct) >= MIN_PACKETS_TO_PROCESS)
+        if((DAD_Timer_Has_Finished(FSM_TIMER_HANDLE) && DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct) >= MIN_PACKETS_TO_PROCESS)
                 || RSA_BUFFER_SIZE ==  DAD_UART_NumCharsInBuffer(&interfaceStruct->RSA_UART_struct)){
             *state = HANDLE_PERIPH;
+            lastDataTransmission = interfaceStruct->lastConnectedTime_ms;
         }
 
         // Check for RSA timeout
         else if(DAD_SW_Timer_getMS(&interfaceStruct->lastConnectedTime_ms)
-                && interfaceStruct->lastConnectedTime_ms - oldTime > RSA_RX_TIMEOUT_PERIOD_MS){
+                && interfaceStruct->lastConnectedTime_ms - lastDataTransmission > RSA_RX_TIMEOUT_PERIOD_MS){
             *state = HANDLE_RSA_TIMEOUT;
+        }
+
+        // Check for stop input from user
+        else if(!interfaceStruct->startStop){
+            *state = STOP_STATE;
         }
         break;
     case HANDLE_PERIPH:

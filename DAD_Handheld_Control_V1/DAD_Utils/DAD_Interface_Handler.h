@@ -40,6 +40,7 @@
 // UART Macros
 #define RSA_BAUD            57600
 #define RSA_BUFFER_SIZE     1950
+//#define RSA_BUFFER_SIZE     700
 #define HMI_BAUD            38400
 #define HMI_BUFFER_SIZE     1
 #define MAX_FILENAME_SIZE   12
@@ -54,7 +55,7 @@
 
 // FSM Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
-#define FSM_TIMER_PERIOD    1000                            // Period in ms. Triggers an interrupt to kick off the FSM every so often.
+#define FSM_TIMER_PERIOD    750                             // Period in ms. Triggers an interrupt to kick off the FSM every so often.
 
 // Packet Macros
 #define STATUS_MASK         24
