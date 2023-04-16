@@ -5,9 +5,7 @@
  *      Author: Max
  */
 
-#include <DAD_RTC.h>
-
-// TODO test/debug
+#include <HAL/DAD_RTC.h>
 
 // Init/start RTC
 void DAD_RTC_init(RTC_C_Calendar* calendarStruct){
@@ -27,7 +25,7 @@ void DAD_RTC_init(RTC_C_Calendar* calendarStruct){
 void DAD_RTC_getTime(char* currentTime){
     RTC_C_Calendar cal = MAP_RTC_C_getCalendarTime();
 
-    // DD/MM/YY HR:MIN:SEC
+    // DD/MM/YYYY HR:MIN:SEC
     sprintf(currentTime, "%02d/%02d/%04d %02d:%02d:%02d",
             cal.dayOfmonth, cal.month, cal.year, cal.hours, cal.minutes, cal.seconds);
 }
