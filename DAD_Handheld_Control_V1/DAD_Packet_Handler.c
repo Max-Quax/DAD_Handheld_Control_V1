@@ -93,6 +93,7 @@ static void handlePacket(DAD_Interface_Struct* interfaceStruct)
 
 static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct* interfaceStruct)
 {
+    DAD_Tell_UI_Whether_To_Expect_FFT(STOP, interfaceStruct);
     #ifdef WRITE_TO_HMI
     // Write to HMI
     // Report sensor disconnected to HMI

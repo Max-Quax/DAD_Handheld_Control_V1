@@ -17,10 +17,10 @@
 #include <HAL/DAD_Timer.h>
 
 // Config macros
-#define PORT_2_2_AS_RSA
+// #define PORT_2_2_AS_RSA
 
 #define MICRO_SD_TIMER_MODULE   TIMER_A2_BASE
-#define MICRO_SD_CMD_DELAY 50                   // Wait until command mode is entered
+#define MICRO_SD_CMD_DELAY      50                   // Wait until command mode is entered
 #define MICRO_SD_BAUD_RATE      57600
 #define MICRO_SD_BUFF_SIZE      1
 

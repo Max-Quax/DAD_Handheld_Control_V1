@@ -28,7 +28,7 @@
 #include <HAL/DAD_SW_Timer.h>
 
 // Configuration macros
-#define LOG_INPUT
+// #define LOG_INPUT
 // #define REPORT_FAILURE
 #define WRITE_TO_ONLY_ONE_FILE
 // #define FREQ_WRITE_TIME_TEST
@@ -39,8 +39,8 @@
 
 // UART Macros
 #define RSA_BAUD            57600
-#define RSA_BUFFER_SIZE     1950
-//#define RSA_BUFFER_SIZE     700
+//#define RSA_BUFFER_SIZE     1950
+#define RSA_BUFFER_SIZE     700
 #define HMI_BAUD            38400
 #define HMI_BUFFER_SIZE     1
 #define MAX_FILENAME_SIZE   12
@@ -51,7 +51,7 @@
 #endif
 #define HMI_TX_UART_HANDLE  EUSCI_A2_BASE
 #define HMI_RX_UART_HANDLE  EUSCI_A3_BASE
-#define HMI_THROTTLE_PERIOD_MS  3000
+#define HMI_THROTTLE_PERIOD_MS  1000
 
 // FSM Timer Macros
 #define FSM_TIMER_HANDLE TIMER_A0_BASE
