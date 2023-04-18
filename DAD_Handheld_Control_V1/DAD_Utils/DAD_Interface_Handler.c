@@ -30,8 +30,7 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
     // microSD Interface init, open log file
     interfaceStruct->sensorPortOrigin = STOP;                        // Describes what file is currently being written to
     strcpy(interfaceStruct->fileName, "log.txt");
-    if(!DAD_microSD_InitUART(&interfaceStruct->microSD_UART))
-        while(1);
+    DAD_microSD_InitUART(&interfaceStruct->microSD_UART);
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
 
     // Init buffs with all zeros (memset was not cooperating. Skill issue?)
@@ -47,6 +46,8 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
     DAD_Timer_Start(TIMER_A1_BASE);
     #endif
 
+    // Init RTC
+    DAD_RTC_initFromFlash();
 
     //Init Utils
     DAD_Utils_initFreqLUT(&interfaceStruct->lutStruct);
@@ -216,11 +217,21 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
     if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS
             && DAD_GPIO_getPage(&interfaceStruct->gpioStruct) == port + 1){
 
+        uint8_t data;
+        uint16_t i;
+
         // Write preamble to microSD
         char microSDmsg[17];
         (type == VIB) ? sprintf(microSDmsg, "\np%d, Vib, ", port + 1):
                         sprintf(microSDmsg, "\np%d, Mic, ", port + 1);
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
+
+        // Write to microSD
+        for(i = 0; i < SIZE_OF_FFT-2; i++){
+            data = interfaceStruct->lutStruct.freqBuf[port][i];
+            DAD_microSD_Write(interfaceStruct->lutStruct.microSDFreqLUT[data], &interfaceStruct->microSD_UART);
+        }
+        DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
 
         // Write preamble to HMI
         char hmiMsg[15];
@@ -230,34 +241,32 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
 
+        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 0);       // Shifts old FFT data out. Makes it look better
+
+        // Write to HMI
+        for(i = 0; i < SIZE_OF_FFT-2; i++){
+            // Write to HMI
+            data = interfaceStruct->lutStruct.freqBuf[port][i];
+            DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, data);
+        }
+
+
+    }
+    // Don't write to HMI, but write to microSD
+    else if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS){
         uint8_t data;
         uint16_t i;
 
-        DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 0);
-
-        for(i = 0; i < SIZE_OF_FFT-2; i++){
-            data = interfaceStruct->lutStruct.freqBuf[port][i];
-            DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, data);
-
-            // Write to microSD
-            DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->lutStruct), &interfaceStruct->microSD_UART);
-        }
-        DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
-
-    }
-    // Don't write to HMI
-    else if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS){
         // Write preamble to microSD
         char microSDmsg[17];
         (type == VIB) ? sprintf(microSDmsg, "\np%d, Vib, ", port + 1):
                         sprintf(microSDmsg, "\np%d, Mic, ", port + 1);
         DAD_microSD_Write(microSDmsg, &interfaceStruct->microSD_UART);
 
-        uint8_t data;
-        uint16_t i;
+        // Write data to microSD
         for(i = 0; i < SIZE_OF_FFT-2; i++){
             data = interfaceStruct->lutStruct.freqBuf[port][i];
-            DAD_microSD_Write(DAD_Utils_getMicroSDStr(data, &interfaceStruct->lutStruct), &interfaceStruct->microSD_UART);
+            DAD_microSD_Write(interfaceStruct->lutStruct.microSDFreqLUT[data], &interfaceStruct->microSD_UART);
         }
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }

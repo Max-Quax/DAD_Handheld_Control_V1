@@ -26,6 +26,7 @@
 #include <HAL/DAD_microSD.h>
 #include <HAL/DAD_GPIO.h>
 #include <HAL/DAD_SW_Timer.h>
+#include <HAL/DAD_RTC.h>
 
 // Configuration macros
 // #define LOG_INPUT
@@ -103,6 +104,7 @@ typedef struct DAD_Interface_Struct_{
     #ifdef DELAY_UART_TRANSITION                // Ensure device is never tyransmitting and receiving on the same channel at any moment
     Timer_A_UpModeConfig UART_Switch_Timer;     // Same as FSM timer, as they are never used at the same time
     #endif
+    char RTC_currentTime[22];
 
     // For writing to periphs
     uint8_t sensorPortOrigin;                   // Describes where the package is coming from

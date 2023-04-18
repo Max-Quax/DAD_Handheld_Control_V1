@@ -8,7 +8,9 @@
 #include <DAD_Packet_Handler.h>
 
 void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
-
+    // Handle RT data
+    DAD_RTC_getTime(interfaceStruct->RTC_currentTime);
+    DAD_RTC_saveTime();
 
     // Set GPIO flags for use in this run
     DAD_handle_UI_Feedback(interfaceStruct);
@@ -16,7 +18,10 @@ void handleRSABuffer(DAD_Interface_Struct* interfaceStruct){
     // Write everything to log
     #ifdef WRITE_TO_ONLY_ONE_FILE
     strcpy(interfaceStruct->fileName, "log.txt");
+    DAD_microSD_Write("\nRunning Time: ", &interfaceStruct->microSD_UART);
+    DAD_microSD_Write(interfaceStruct->RTC_currentTime, &interfaceStruct->microSD_UART);
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
+    DAD_microSD_Write("\n", &interfaceStruct->microSD_UART);
     #endif
 
     // Read individual packets from buffer
@@ -151,7 +156,6 @@ static void handleDisconnect(uint8_t port, packetType type, DAD_Interface_Struct
     DAD_microSD_Write(message, &interfaceStruct->microSD_UART);
     interfaceStruct->sensorPortOrigin = 255; // Record that current file is log.txt
 
-    // TODO reset calcstruct
 }
 
 
@@ -179,7 +183,6 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 
         case TEMP:  // Fall through to HUM
         case HUM:
-            // TODO condition data
             data = ((packet[1] << 8) + packet[2]) % 110;
             DAD_writeSlowDataToUI(data, type, interfaceStruct);
             DAD_writeMovingAvgToUI(data, type, interfaceStruct);
@@ -206,7 +209,6 @@ static void handleData(uint8_t port, packetType type, uint8_t packet[PACKET_SIZE
 
 // Handles packets of "connected, no data" type
 static void handle_CON_ND(packetType type, DAD_Interface_Struct* interfaceStruct){
-    // TODO check sensor still responding
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
 }
 
@@ -216,8 +218,6 @@ void handleMessage(packetType type, DAD_Interface_Struct* interfaceStruct){
     DAD_microSD_openFile(interfaceStruct->fileName, &interfaceStruct->microSD_UART);
     interfaceStruct->sensorPortOrigin = 255;
 
-    // TODO timestamp
-    // TODO test
     char message[50];
     HMI_color color;
     switch(type){
