@@ -34,7 +34,6 @@ typedef struct DAD_LUT_Struct_{
     // Buffer pointers for buffering sound/vibration data
         // Buffers are loaded up with data.
         // Data from buffer is then sent all at once
-    // TODO make freqBuf dynamically allocated
     uint8_t freqBuf [NUM_OF_PORTS][SIZE_OF_FFT];
 } DAD_LUT_Struct;
 

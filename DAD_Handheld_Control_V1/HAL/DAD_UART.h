@@ -53,7 +53,7 @@ void DAD_UART_Set_Config(uint16_t baudRate, uint32_t moduleInstance, DAD_UART_St
 // Initializes the uart module with the specified config information. Needs a buffer to put characters in.
 bool DAD_UART_Init(DAD_UART_Struct* UARTPtr, size_t bufferSize);
 
-// TODO Stop UART
+// Stop UART
 void DAD_UART_Stop(DAD_UART_Struct* UARTPtr);
 
 // Get single char from UART
@@ -88,12 +88,5 @@ size_t DAD_UART_NumCharsInBuffer(DAD_UART_Struct* UARTPtr);
     // Uses fractional part of division factor to look through table.
     // Return value just below fractional part
 static uint8_t DAD_UART_Find_Second_Mod_Reg(float divisionFactor);
-
-// TODO At least 1 full message is ready
-// TODO test latency
-//bool DAD_UART_MsgReady(DAD_UART_Struct* UARTPtr);
-
-// TODO - CRC?
-// TODO - DMA?
 
 #endif /* DAD_UART_H_ */

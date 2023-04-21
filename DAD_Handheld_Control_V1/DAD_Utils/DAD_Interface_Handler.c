@@ -40,14 +40,6 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
             interfaceStruct->lutStruct.freqBuf[i][j] = 0;
     }
 
-    // Initialize timer for testing write time
-    #ifdef FREQ_WRITE_TIME_TEST
-    DAD_Timer_Initialize_ms(60000, TIMER_A1_BASE, &(interfaceStruct->FSMtimerConfig));
-    DAD_Timer_Start(TIMER_A1_BASE);
-    #endif
-
-    // Init RTC
-    DAD_RTC_initFromFlash();
 
     //Init Utils
     DAD_Utils_initFreqLUT(&interfaceStruct->lutStruct);
@@ -65,8 +57,7 @@ void DAD_initInterfaces(DAD_Interface_Struct* interfaceStruct){
     DAD_Timer_Start(FSM_TIMER_HANDLE);          // Start timer
 
     // Init RTC
-    // TODO get from FLASH
-    // TODO periodically store to flash
+    DAD_RTC_initFromFlash();
 }
 
 // Constructs packet from data in UART HAL's ring buffer
@@ -163,7 +154,6 @@ void DAD_writeMovingAvgToUI(uint16_t data, packetType type, DAD_Interface_Struct
     DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
     DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin+49);
 
-
     // Message conditioning
     if(type == TEMP){
         DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Avg.txt=\"");
@@ -194,12 +184,12 @@ void DAD_writeMovingAvgToUI(uint16_t data, packetType type, DAD_Interface_Struct
 
 bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* interfaceStruct){
     uint8_t port = interfaceStruct->sensorPortOrigin;
-    uint16_t index = packet[1];                                 // Promote to 16 bit for multiplication
+    uint16_t index = packet[1];                                             // Promote to 16 bit for multiplication
 
     // Add packet to buffer
     if(index * 2 + 1 < SIZE_OF_FFT && port < NUM_OF_PORTS){
-        interfaceStruct->lutStruct.freqBuf[port][index*2] = packet[2];    // just unconditioned data for now
-        interfaceStruct->lutStruct.freqBuf[port][index*2+1] = packet[3];  // just unconditioned data for now
+        interfaceStruct->lutStruct.freqBuf[port][index*2] = packet[2];
+        interfaceStruct->lutStruct.freqBuf[port][index*2+1] = packet[3];
 
         return true;
     }
@@ -209,10 +199,6 @@ bool DAD_addToFreqBuffer(uint8_t packet[PACKET_SIZE], DAD_Interface_Struct* inte
 void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStruct){
     uint8_t port = interfaceStruct->sensorPortOrigin;
     DAD_Tell_UI_Whether_To_Expect_FFT(type, interfaceStruct);
-
-    #ifdef FREQ_WRITE_TIME_TEST
-    DAD_Timer_Restart(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
-    #endif
 
     if(interfaceStruct->sensorPortOrigin < NUM_OF_PORTS
             && DAD_GPIO_getPage(&interfaceStruct->gpioStruct) == port + 1){
@@ -271,12 +257,6 @@ void DAD_writeFreqToPeriphs(packetType type, DAD_Interface_Struct* interfaceStru
         DAD_microSD_Write("FFT End\n\n", &interfaceStruct->microSD_UART);
     }
 
-    #ifdef FREQ_WRITE_TIME_TEST
-    float timeElapsed;
-    timeElapsed = DAD_Timer_Stop(TIMER_A1_BASE,  &interfaceStruct->FSMtimerConfig);
-    if(true);
-    #endif
-
     DAD_displayAvgIntensity(type, interfaceStruct);
 }
 
@@ -305,14 +285,9 @@ void DAD_displayAvgIntensity(packetType type, DAD_Interface_Struct* interfaceStr
         DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "HOME.s");
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, interfaceStruct->sensorPortOrigin + 49);
         //Update text on home screen
-        #ifdef AVG_INTENSITY
         char avgIntensityMsg[20];
         sprintf(avgIntensityMsg, "Val.txt=\"%ddB\"", (int)DAD_Calc_AvgIntensity(interfaceStruct->lutStruct.freqBuf[interfaceStruct->sensorPortOrigin], type));
         DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, avgIntensityMsg);
-        #else
-        (type == VIB) ? DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"VIB\"") :
-                DAD_UART_Write_Str(&interfaceStruct->HMI_TX_UART_struct, "Val.txt=\"MIC\"");
-        #endif
         // End of transmission
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);
         DAD_UART_Write_Char(&interfaceStruct->HMI_TX_UART_struct, 255);

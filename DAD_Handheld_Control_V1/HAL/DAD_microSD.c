@@ -23,7 +23,7 @@ static void DAD_microSD_enterCMD(DAD_UART_Struct* uartStruct){
 bool DAD_microSD_InitUART(DAD_UART_Struct* uartStruct){
     // Initialize UART
     DAD_UART_Set_Config(MICRO_SD_BAUD_RATE, MICRO_SD_MODULE_INSTANCE, uartStruct);  // Config UART
-    if(!DAD_UART_Init(uartStruct, MICRO_SD_BUFF_SIZE))                             // Init UART
+    if(!DAD_UART_Init(uartStruct, MICRO_SD_BUFF_SIZE))                              // Init UART
         while(1);
     //return false;
     MAP_UART_disableInterrupt(uartStruct->moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);

@@ -15,7 +15,6 @@
 #include <stdio.h>
 
 #define FLASH_RW_ADDRESS    0x0003F000
-//#define FLASH_RW_ADDRESS    0x0001000
 #define FLASH_BLOCK_SIZE    8
 #define HAS_BEEN_INIT       12
 

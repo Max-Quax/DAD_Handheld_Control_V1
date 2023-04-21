@@ -32,7 +32,6 @@
 // #define LOG_INPUT
 // #define REPORT_FAILURE
 #define WRITE_TO_ONLY_ONE_FILE
-// #define FREQ_WRITE_TIME_TEST
 #define WRITE_TO_HMI
 #define WRITE_TO_MICRO_SD
 #define GET_GPIO_FEEDBACK
@@ -40,7 +39,6 @@
 
 // UART Macros
 #define RSA_BAUD            57600
-//#define RSA_BUFFER_SIZE     1950
 #define RSA_BUFFER_SIZE     700
 #define HMI_BAUD            38400
 #define HMI_BUFFER_SIZE     1
@@ -73,8 +71,6 @@
 
 
 typedef enum {DISCON, CON_D, CON_ND, MSG} packetStatus;
-//typedef enum {TEMP = 0b000, HUM = 0b001, VIB = 0b010, MIC = 0b011, LOWBAT = 0b100, ERR = 0b101, STOP = 0b110, START = 0b111} packetType;
-//typedef enum {HOME = 0, PT1 = 1, PT2 = 2, PT3 = 3, PT4 = 4, PT5 = 5, PT6 = 6, PT7 = 7, PT8 = 8} HMIpage;
 typedef enum {HOUR = 0, MIN = 1, SEC = 3, OTHER = 4} HMI_msgType;
 typedef enum {RED = 0b1111100000000000, BLUE = 0b0000000000011111, BLACK = 0b0000000000000000} HMI_color;
 
@@ -96,14 +92,6 @@ typedef struct DAD_Interface_Struct_{
 
     // Timer Control
     Timer_A_UpModeConfig FSMtimerConfig;
-    #ifdef THROTTLE_UI_OUTPUT
-    Timer_A_UpModeConfig UIupdateTimer;
-    Timer_A_UpModeConfig UIFFTupdateTimer;      // Limit FFT update to slower than rest of UI
-    bool fftUpdateRequested[NUM_OF_PORTS];
-    #endif
-    #ifdef DELAY_UART_TRANSITION                // Ensure device is never tyransmitting and receiving on the same channel at any moment
-    Timer_A_UpModeConfig UART_Switch_Timer;     // Same as FSM timer, as they are never used at the same time
-    #endif
     char RTC_currentTime[22];
 
     // For writing to periphs

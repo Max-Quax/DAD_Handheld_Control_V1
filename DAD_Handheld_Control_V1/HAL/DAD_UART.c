@@ -103,7 +103,7 @@ void DAD_UART_Write_Str(DAD_UART_Struct* UARTPtr, char* msg){
     }
 }
 
-// TODO stop UART
+// Stop UART
 void DAD_UART_Stop(DAD_UART_Struct* UARTPtr){
     uint16_t interruptNum = 0;
     switch(UARTPtr->moduleInst){
@@ -124,7 +124,6 @@ void DAD_UART_Stop(DAD_UART_Struct* UARTPtr){
     MAP_UART_disableInterrupt(UARTPtr->moduleInst, EUSCI_A_UART_RECEIVE_INTERRUPT);
     MAP_Interrupt_disableInterrupt(interruptNum);
     MAP_UART_disableModule(UARTPtr->moduleInst);
-//    MAP_UART_disableInterrupt(UARTPtr->moduleInst, 0xFF);    // Disables all interrupts on specific module
 }
 
 

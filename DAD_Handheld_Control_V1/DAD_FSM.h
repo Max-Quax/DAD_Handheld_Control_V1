@@ -3,6 +3,8 @@
  *
  *  Created on: Mar 8, 2023
  *      Author: Max Engel
+ *
+ *      State machine for controlling handheld device.
  */
 
 #ifndef DAD_FSM_H_

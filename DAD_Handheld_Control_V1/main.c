@@ -1,3 +1,14 @@
+// S23, Team 42
+// NAVAIR Data Acquisition Device
+// Maximilien Engel
+
+/*
+ * Role:    Takes in data from bluetooth over UART, buffers it and spits it out along with relevant metrics to both GUI and microSD
+ *
+ * Note:    HMI and GUI are sometimes used interchangeably.
+ *
+ */
+
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -11,24 +22,15 @@
 #include <DAD_Utils/DAD_Interface_Handler.h>
 #include <DAD_FSM.h>
 
-// Requirements
-// TODO get UART to MSP working
-        // Time
-        // configs
-    // TODO condition data
-    // TODO throttle HMI display
+// Unfulfilled Requirements
+    // UI to MCU config storage
+    // true-to-life RTC
+    // Data conditioning
 
-// Non-requirement priority
-    // TODO timestamp
-
-// Quality of life
-    // TODO ensure singleton
-    // TODO low power shutdown
-    // TODO hot glue
-    // TODO raise the alarm when sensor hasn't said anything in a while
-
-// Issues with HMI
-    // When switching to different FFT, keeps data from old FFT
+// Unfulfilled Quality of life
+    // ensure singleton
+    // low power shutdown
+    // raise the alarm when sensor hasn't said anything in a while
 
 int main(void)
 {
@@ -41,9 +43,8 @@ int main(void)
     // Application loop
     FSMstate state = STARTUP;
     while(true){
-        DAD_FSM_control(&state, &interfaceStruct);                                // Handle everything
+        DAD_FSM_control(&state, &interfaceStruct);              // Handle everything
         MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);    // Debug - check that it's not hung up
         MAP_PCM_gotoLPM0();                                     // Go back to sleep until next interrupt
-
     }
 }

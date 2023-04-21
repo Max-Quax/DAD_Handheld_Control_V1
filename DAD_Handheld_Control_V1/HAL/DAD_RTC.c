@@ -86,13 +86,6 @@ void DAD_RTC_saveTime(){
     MAP_FlashCtl_eraseSector(FLASH_RW_ADDRESS);
     bool test = MAP_FlashCtl_programMemory(rtcArr, (void*)FLASH_RW_ADDRESS, FLASH_BLOCK_SIZE);
     MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1,FLASH_SECTOR31);
-
-    // Debug - Read from flash
-    uint8_t readFromFlash[FLASH_BLOCK_SIZE];
-    int i;
-    for(i = 0; i < FLASH_BLOCK_SIZE; i++)
-        readFromFlash[i] = *(uint8_t*)(FLASH_RW_ADDRESS + i);
-    test = test;
 }
 
 

@@ -46,7 +46,6 @@ bool DAD_microSD_InitUART(DAD_UART_Struct* uartStruct);
 bool DAD_microSD_openFile(char* fileName, DAD_UART_Struct* uartStruct);
 
 // Write to file
-    // TODO write
     // Parameter - array of chars for file name. 8.3 format
     // Parameter - array of strs for message. writes as CSV
     // Parameter - structure for using the UART HALs
